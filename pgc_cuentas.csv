@@ -1,0 +1,104 @@
+codigo;nombre;informe;tipo
+100;Capital social;balance;patrimonio_neto
+101;Fondo social;balance;patrimonio_neto
+102;Capital;balance;patrimonio_neto
+103;Socios por desembolsos no exigidos;balance;patrimonio_neto
+104;Socios por aportaciones no dinerarias pendientes;balance;patrimonio_neto
+110;Prima de emisión o asunción;balance;patrimonio_neto
+112;Reserva legal;balance;patrimonio_neto
+113;Reservas voluntarias;balance;patrimonio_neto
+114;Reservas especiales;balance;patrimonio_neto
+118;Aportaciones de socios o propietarios;balance;patrimonio_neto
+120;Remanente;balance;patrimonio_neto
+121;Resultados negativos de ejercicios anteriores;balance;patrimonio_neto
+129;Resultado del ejercicio;balance;patrimonio_neto
+170;Deudas a largo plazo con entidades de crédito;balance;pasivo_no_corriente
+171;Deudas a largo plazo;balance;pasivo_no_corriente
+173;Proveedores de inmovilizado a largo plazo;balance;pasivo_no_corriente
+174;Efectos a pagar a largo plazo;balance;pasivo_no_corriente
+175;Pasivos por arrendamiento financiero a largo plazo;balance;pasivo_no_corriente
+177;Obligaciones y bonos a largo plazo;balance;pasivo_no_corriente
+180;Fianzas recibidas a largo plazo;balance;pasivo_no_corriente
+200;Investigación;balance;activo_no_corriente
+201;Desarrollo;balance;activo_no_corriente
+203;Propiedad industrial;balance;activo_no_corriente
+206;Aplicaciones informáticas;balance;activo_no_corriente
+210;Terrenos y bienes naturales;balance;activo_no_corriente
+211;Construcciones;balance;activo_no_corriente
+212;Instalaciones técnicas;balance;activo_no_corriente
+213;Maquinaria;balance;activo_no_corriente
+214;Utillaje;balance;activo_no_corriente
+215;Otras instalaciones;balance;activo_no_corriente
+216;Mobiliario;balance;activo_no_corriente
+217;Equipos para procesos de información;balance;activo_no_corriente
+218;Elementos de transporte;balance;activo_no_corriente
+219;Otro inmovilizado material;balance;activo_no_corriente
+280;Amortización acumulada del inmovilizado intangible;balance;activo_no_corriente
+281;Amortización acumulada del inmovilizado material;balance;activo_no_corriente
+290;Deterioro de valor del inmovilizado intangible;balance;activo_no_corriente
+291;Deterioro de valor del inmovilizado material;balance;activo_no_corriente
+300;Mercaderías;balance;activo_corriente
+301;Materias primas;balance;activo_corriente
+310;Existencias;balance;activo_corriente
+400;Proveedores;balance;pasivo_corriente
+401;Proveedores, efectos comerciales a pagar;balance;pasivo_corriente
+407;Anticipos a proveedores;balance;activo_corriente
+410;Acreedores por prestaciones de servicios;balance;pasivo_corriente
+411;Acreedores, efectos comerciales a pagar;balance;pasivo_corriente
+430;Clientes;balance;activo_corriente
+431;Clientes, efectos comerciales a cobrar;balance;activo_corriente
+438;Anticipos de clientes;balance;pasivo_corriente
+440;Deudores;balance;activo_corriente
+465;Remuneraciones pendientes de pago;balance;pasivo_corriente
+470;Hacienda Pública, deudora por diversos conceptos;balance;activo_corriente
+472;Hacienda Pública, IGIC/IVA soportado;balance;activo_corriente
+475;Hacienda Pública, acreedora por conceptos fiscales;balance;pasivo_corriente
+476;Organismos de la Seguridad Social, acreedores;balance;pasivo_corriente
+477;Hacienda Pública, IGIC/IVA repercutido;balance;pasivo_corriente
+479;Pasivos por diferencias temporarias imponibles;balance;pasivo_corriente
+520;Deudas a corto plazo con entidades de crédito;balance;pasivo_corriente
+521;Deudas a corto plazo;balance;pasivo_corriente
+523;Proveedores de inmovilizado a corto plazo;balance;pasivo_corriente
+524;Efectos a pagar a corto plazo;balance;pasivo_corriente
+525;Dividendos activos a pagar;balance;pasivo_corriente
+551;Cuenta corriente con socios y administradores;balance;activo_corriente
+555;Partidas pendientes de aplicación;balance;activo_corriente
+570;Caja, euros;balance;activo_corriente
+572;Bancos e instituciones de crédito c/c vista, euros;balance;activo_corriente
+600;Compras de mercaderías;pyg;gasto_explotacion
+601;Compras de materias primas;pyg;gasto_explotacion
+602;Compras de otros aprovisionamientos;pyg;gasto_explotacion
+607;Trabajos realizados por otras empresas;pyg;gasto_explotacion
+610;Variación de existencias;pyg;gasto_explotacion
+621;Arrendamientos y cánones;pyg;gasto_explotacion
+622;Reparaciones y conservación;pyg;gasto_explotacion
+623;Servicios de profesionales independientes;pyg;gasto_explotacion
+624;Transportes;pyg;gasto_explotacion
+625;Primas de seguros;pyg;gasto_explotacion
+626;Servicios bancarios y similares;pyg;gasto_explotacion
+627;Publicidad, propaganda y relaciones públicas;pyg;gasto_explotacion
+628;Suministros;pyg;gasto_explotacion
+629;Otros servicios;pyg;gasto_explotacion
+630;Impuesto sobre beneficios;pyg;gasto_explotacion
+631;Otros tributos;pyg;gasto_explotacion
+640;Sueldos y salarios;pyg;gasto_explotacion
+642;Seguridad Social a cargo de la empresa;pyg;gasto_explotacion
+649;Otros gastos sociales;pyg;gasto_explotacion
+659;Otras pérdidas en gestión corriente;pyg;gasto_explotacion
+662;Intereses de deudas;pyg;gasto_financiero
+665;Intereses por descuento de efectos y operaciones de factoring;pyg;gasto_financiero
+668;Diferencias negativas de cambio;pyg;gasto_financiero
+669;Otros gastos financieros;pyg;gasto_financiero
+678;Gastos excepcionales;pyg;gasto_explotacion
+680;Amortización del inmovilizado intangible;pyg;gasto_explotacion
+681;Amortización del inmovilizado material;pyg;gasto_explotacion
+694;Pérdidas por deterioro de créditos por operaciones comerciales;pyg;gasto_explotacion
+700;Ventas de mercaderías;pyg;ingreso_explotacion
+701;Ventas de productos terminados;pyg;ingreso_explotacion
+705;Prestaciones de servicios;pyg;ingreso_explotacion
+740;Subvenciones, donaciones y legados a la explotación;pyg;ingreso_explotacion
+752;Ingresos por arrendamientos;pyg;ingreso_explotacion
+759;Ingresos por servicios diversos;pyg;ingreso_explotacion
+762;Ingresos de créditos;pyg;ingreso_financiero
+769;Otros ingresos financieros;pyg;ingreso_financiero
+778;Ingresos excepcionales;pyg;ingreso_explotacion
