@@ -2,7 +2,14 @@ from db_context import get_connection
 
 
 def columna_existe(cursor, tabla, columna):
-    cursor.execute(f"PRAGMA table_info({tabla})")
+    cursor.execute("""
+        SELECT column_name
+        FROM information_schema.columns
+        WHERE table_name = %s
+        AND column_name = %s
+    """, (tabla, columna))
+
+    return cursor.fetchone() is not None
     columnas = cursor.fetchall()
     nombres = [c[1] for c in columnas]
     return columna in nombres

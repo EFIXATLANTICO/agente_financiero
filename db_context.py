@@ -1,17 +1,22 @@
 import os
 import sqlite3
-
-MASTER_DB_PATH = "database/master.db"
+import psycopg2
+import streamlit as st
 
 
 def ensure_dirs():
-    os.makedirs("database", exist_ok=True)
-    os.makedirs("database/empresas", exist_ok=True)
+    pass
 
 
 def get_master_connection():
-    ensure_dirs()
-    return sqlite3.connect(MASTER_DB_PATH)
+    return psycopg2.connect(
+        host=st.secrets["SUPABASE_HOST"],
+        port=st.secrets["SUPABASE_PORT"],
+        database=st.secrets["SUPABASE_DB"],
+        user=st.secrets["SUPABASE_USER"],
+        password=st.secrets["SUPABASE_PASSWORD"],
+        sslmode="require"
+    )
 
 
 def get_db_path():
@@ -26,10 +31,6 @@ def get_db_path():
 
 
 def obtener_empresa_id_activa():
-    """
-    Intenta obtener el ID de la empresa activa a partir de la ruta
-    de la base de datos seleccionada.
-    """
     path = get_db_path()
     nombre_archivo = os.path.basename(path)
     nombre_sin_ext = os.path.splitext(nombre_archivo)[0]
@@ -48,7 +49,7 @@ def obtener_empresa_id_activa():
             """
             SELECT id
             FROM empresas
-            WHERE db_path = ?
+            WHERE db_path = %s
             LIMIT 1
             """,
             (path,),
@@ -76,16 +77,8 @@ def clear_active_db_path():
 
 
 def get_connection():
-    ensure_dirs()
-    path = get_db_path()
+    return get_master_connection()
 
-    if not os.path.exists(path):
-        raise RuntimeError(
-            f"La base de datos no existe: {path}. "
-            "Debes inicializarla antes de usarla."
-        )
-
-    return sqlite3.connect(path)
 
 def get_current_db_info():
     path = os.environ.get("ACTIVE_DB_PATH")

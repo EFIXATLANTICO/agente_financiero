@@ -12,7 +12,7 @@ def inicializar_tablas_conciliacion():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS movimientos_banco (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         fecha TEXT,
         concepto TEXT,
         importe REAL,
@@ -26,7 +26,7 @@ revisado INTEGER DEFAULT 0
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS conciliaciones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         movimiento_banco_id INTEGER,
         fecha TEXT,
         score_ia REAL,
@@ -37,7 +37,7 @@ revisado INTEGER DEFAULT 0
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS conciliacion_detalle (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         conciliacion_id INTEGER,
         factura_id INTEGER,
         importe_aplicado REAL
@@ -46,7 +46,7 @@ revisado INTEGER DEFAULT 0
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS conciliacion_snapshot (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         asiento_id INTEGER,
         lineas_json TEXT
     )

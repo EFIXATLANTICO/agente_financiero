@@ -4,3 +4,4 @@ numpy
 openpyxl
 plotly
 streamlit-aggrid
+psycopg2-binary

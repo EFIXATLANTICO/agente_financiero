@@ -1066,12 +1066,12 @@ def calcular_resumen_igic_por_trimestres(cursor, year=None):
         year = datetime.datetime.today().year
 
     cursor.execute("""
-        SELECT a.fecha, l.cuenta, l.movimiento, l.importe
+        SELECT a.id, a.fecha, l.cuenta, l.movimiento, l.importe
         FROM lineas_asiento l
         INNER JOIN asientos a
             ON a.id = l.asiento_id
-        WHERE substr(a.fecha, 1, 4) = ?
-        ORDER BY a.fecha ASC, l.id ASC
+        WHERE substr(a.fecha, 1, 4) = %s
+        ORDER BY a.fecha ASC, a.id ASC
     """, (str(year),))
 
     lineas = cursor.fetchall()

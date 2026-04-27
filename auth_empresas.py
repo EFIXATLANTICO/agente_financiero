@@ -15,7 +15,7 @@ def inicializar_master():
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE NOT NULL,
         password_hash TEXT NOT NULL,
         nombre TEXT,
@@ -27,7 +27,7 @@ def inicializar_master():
 
     cur.execute("""
     CREATE TABLE IF NOT EXISTS empresas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         nombre TEXT NOT NULL,
         nif TEXT,
         email TEXT,
@@ -37,17 +37,28 @@ def inicializar_master():
     """)
 
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS usuarios_empresas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    CREATE TABLE IF NOT EXISTS usuarios (
+        id SERIAL PRIMARY KEY,
         usuario_id INTEGER NOT NULL,
         empresa_id INTEGER NOT NULL,
         rol_en_empresa TEXT DEFAULT 'admin',
         UNIQUE(usuario_id, empresa_id)
     )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios_empresas (
+            id SERIAL PRIMARY KEY,
+            usuario_id INTEGER NOT NULL,
+            empresa_id INTEGER NOT NULL,
+            rol_en_empresa TEXT DEFAULT 'admin',
+            activo INTEGER DEFAULT 1,
+            creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
 
     conn.commit()
     conn.close()
+
 
 
 def crear_usuario(username, password, nombre="", email="", rol="admin"):
@@ -57,7 +68,7 @@ def crear_usuario(username, password, nombre="", email="", rol="admin"):
 
     cur.execute("""
     INSERT INTO usuarios (username, password_hash, nombre, email, rol, activo)
-    VALUES (?, ?, ?, ?, ?, 1)
+    VALUES (%s, %s, %s, %s, %s, 1)
     """, (username, hash_password(password), nombre, email, rol))
 
     conn.commit()
@@ -73,7 +84,7 @@ def crear_empresa(nombre, nif="", email=""):
 
     cur.execute("""
     INSERT INTO empresas (nombre, nif, email, db_path, activa)
-    VALUES (?, ?, ?, '', 1)
+    VALUES (%s, %s, %s, '', 1)
     """, (nombre, nif, email))
 
     empresa_id = cur.lastrowid
@@ -81,8 +92,8 @@ def crear_empresa(nombre, nif="", email=""):
 
     cur.execute("""
     UPDATE empresas
-    SET db_path = ?
-    WHERE id = ?
+    SET db_path = %s
+    WHERE id = %s
     """, (db_path, empresa_id))
 
     conn.commit()
@@ -98,7 +109,7 @@ def vincular_usuario_empresa(usuario_id, empresa_id, rol_en_empresa="admin"):
 
     cur.execute("""
     INSERT OR IGNORE INTO usuarios_empresas (usuario_id, empresa_id, rol_en_empresa)
-    VALUES (?, ?, ?)
+    VALUES (%s, %s, %s)
     """, (usuario_id, empresa_id, rol_en_empresa))
 
     conn.commit()
@@ -113,7 +124,7 @@ def autenticar(username, password):
     cur.execute("""
     SELECT id, username, nombre, email, rol, activo
     FROM usuarios
-    WHERE username = ? AND password_hash = ?
+    WHERE username = %s AND password_hash = %s
     """, (username, hash_password(password)))
 
     fila = cur.fetchone()
@@ -140,7 +151,7 @@ def empresas_de_usuario(usuario_id):
     SELECT e.id, e.nombre, e.db_path, ue.rol_en_empresa
     FROM empresas e
     INNER JOIN usuarios_empresas ue ON e.id = ue.empresa_id
-    WHERE ue.usuario_id = ? AND e.activa = 1
+    WHERE ue.usuario_id = %s AND e.activa = 1
     ORDER BY e.nombre
     """, (usuario_id,))
 
