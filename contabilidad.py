@@ -313,24 +313,20 @@ def borrar_asiento(asiento_id):
     cursor = conn.cursor()
 
     try:
-        cursor.execute("PRAGMA foreign_keys = OFF")
-
-        cursor.execute("DELETE FROM operaciones_asientos WHERE asiento_id = ?", (asiento_id,))
-        cursor.execute("DELETE FROM asientos_importacion WHERE asiento_id = ?", (asiento_id,))
-        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ?", (asiento_id,))
-
-        cursor.execute("DELETE FROM asientos WHERE id = ?", (asiento_id,))
+        cursor.execute("DELETE FROM operaciones_asientos WHERE asiento_id = %s", (asiento_id,))
+        cursor.execute("DELETE FROM asientos_importacion WHERE asiento_id = %s", (asiento_id,))
+        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = %s", (asiento_id,))
+        cursor.execute("DELETE FROM asientos WHERE id = %s", (asiento_id,))
 
         conn.commit()
 
-        return {"ok": True, "mensaje": f"Asiento {asiento_id} borrado FORZADO"}
+        return {"ok": True, "mensaje": f"Asiento {asiento_id} borrado correctamente"}
 
     except Exception as e:
         conn.rollback()
         return {"ok": False, "mensaje": str(e)}
 
     finally:
-        cursor.execute("PRAGMA foreign_keys = ON")
         conn.close()
 # =========================
 # UTILIDADES DE RESET
@@ -345,22 +341,25 @@ def reset_contabilidad():
     cursor = conn.cursor()
 
     try:
-        cursor.execute("PRAGMA foreign_keys = OFF")
+        def tabla_existe(nombre_tabla):
+            cursor.execute("SELECT to_regclass(%s)", (nombre_tabla,))
+            return cursor.fetchone()[0] is not None
 
         tablas_a_borrar = [
-            "lineas_asiento",
-            "asientos_importacion",
             "operaciones_asientos",
+            "asientos_importacion",
+            "lineas_asiento",
             "incidencias_importacion",
-            "importaciones",
-            "facturas",
-            "operaciones",
             "vencimientos",
+            "facturas",
+            "importaciones",
+            "operaciones",
             "validaciones_contables",
             "movimientos_bancarios",
+            "movimientos_banco",
             "conciliaciones",
-            "inmovilizado",
             "amortizaciones",
+            "inmovilizado",
             "asientos",
             "clientes",
             "proveedores"
@@ -370,9 +369,11 @@ def reset_contabilidad():
 
         for tabla in tablas_a_borrar:
             try:
-                cursor.execute(f"DELETE FROM {tabla}")
+                if tabla_existe(tabla):
+                    cursor.execute(f"DELETE FROM {tabla}")
             except Exception as e:
                 errores.append(f"{tabla}: {e}")
+                conn.rollback()
 
         conn.commit()
 
@@ -408,10 +409,6 @@ def reset_contabilidad():
         }
 
     finally:
-        try:
-            cursor.execute("PRAGMA foreign_keys = ON")
-        except Exception:
-            pass
         conn.close()
 
 def aplicar_correccion_incidencia(incidencia_id, propuesta):
