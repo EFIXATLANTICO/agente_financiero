@@ -206,6 +206,7 @@ def validar_sistema_completo():
                 END)::numeric, 2) AS saldo
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '43%'
+              AND TRIM(cuenta) NOT LIKE '438%'
             GROUP BY cuenta_base
         """)
         for cuenta_base, saldo in cursor.fetchall():
@@ -232,6 +233,7 @@ def validar_sistema_completo():
                 END)::numeric, 2) AS saldo
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '40%'
+              AND TRIM(cuenta) NOT LIKE '407%'
             GROUP BY cuenta_base
         """)
         for cuenta_base, saldo in cursor.fetchall():

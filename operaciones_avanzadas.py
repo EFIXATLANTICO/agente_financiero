@@ -684,10 +684,10 @@ def registrar_operacion_avanzada(texto, fecha, igic_defecto=7.0):
 
         cursor.execute(
             """
-            INSERT INTO operaciones_asientos (operacion_id, asiento_id, empresa_id)
-            VALUES (%s, %s, %s)
+            INSERT INTO operaciones_asientos (operacion_id, asiento_id)
+            VALUES (%s, %s)
             """,
-            (operacion_id, asiento_id, empresa_id),
+            (operacion_id, asiento_id),
         )
 
         for vencimiento in resuelta.get("vencimientos", []):
