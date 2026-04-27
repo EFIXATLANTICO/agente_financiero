@@ -421,10 +421,12 @@ def pantalla_login():
         unsafe_allow_html=True
     )
 
-    usuario = st.text_input("Usuario", autocomplete="username")
-    password = st.text_input("Contraseña", type="password", autocomplete="current-password")
+    with st.form("form_login_efix", clear_on_submit=False):
+        usuario = st.text_input("Usuario", autocomplete="username")
+        password = st.text_input("Contraseña", type="password", autocomplete="current-password")
+        enviar_login = st.form_submit_button("Entrar")
 
-    if st.button("Entrar"):
+    if enviar_login:
         usuario_limpio = (usuario or "").strip()
         password_limpio = (password or "").strip()
 
