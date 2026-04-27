@@ -11,6 +11,7 @@ from motor_operaciones import (
 from clasificador_operaciones import clasificar_operacion
 from motor_catalogo import generar_lineas_desde_catalogo
 from contabilidad import registrar_pago_parcial_compra
+from operaciones_avanzadas import registrar_operacion_avanzada
 
 # =========================
 # UTILIDADES BASE
@@ -719,6 +720,10 @@ def existe_operacion_parecida_reciente(fecha, concepto, total, tipo_operacion):
 # =========================
 
 def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
+    resultado_avanzado = registrar_operacion_avanzada(texto, fecha, igic_defecto)
+    if resultado_avanzado is not None:
+        return resultado_avanzado
+
     empresa_id = obtener_empresa_id_activa()
 
     clasificacion = clasificar_operacion(texto)

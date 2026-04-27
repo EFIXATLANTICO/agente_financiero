@@ -5524,6 +5524,15 @@ def pantalla_registrar_operacion():
                     if "importe" in resultado:
                         st.write(f"**Importe:** {resultado['importe']:.2f} €")
 
+                    if resultado.get("advertencias"):
+                        for aviso in resultado["advertencias"]:
+                            st.warning(aviso)
+
+                    if resultado.get("vencimientos"):
+                        df_vencimientos = pd.DataFrame(resultado["vencimientos"])
+                        st.subheader("Vencimientos generados")
+                        st.dataframe(df_vencimientos, use_container_width=True)
+
                     df_lineas = pd.DataFrame(
                         resultado["lineas"],
                         columns=["Cuenta", "Movimiento", "Importe"]
