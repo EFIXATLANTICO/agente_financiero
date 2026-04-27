@@ -1399,11 +1399,13 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                     raise ValueError("Cliente vacio")
 
                 total = round(_parsear_importe_excel(row.get("total")), 2)
-                if total <= 0:
-                    raise ValueError("Importe negativo o cero: revisar como abono/rectificacion")
+                if total == 0:
+                    raise ValueError("Importe cero: revisar manualmente")
 
-                base = round(total / (1 + igic_pct / 100), 2)
-                cuota = round(total - base, 2)
+                es_abono = total < 0
+                total_abs = abs(total)
+                base = round(total_abs / (1 + igic_pct / 100), 2)
+                cuota = round(total_abs - base, 2)
                 fecha_txt = fecha.strftime("%Y-%m-%d")
                 forma_pago = _texto_limpio(row.get("forma pago"), "credito").lower()
                 dias_vto = _parsear_dias_vencimiento(row.get("vencimientos"))
@@ -1440,8 +1442,9 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                     )
                     tercero_id = cursor.fetchone()[0]
 
-                estado_factura = "pendiente" if dias_vto > 0 else "pagada"
+                estado_factura = "abono" if es_abono else "pendiente" if dias_vto > 0 else "pagada"
                 fecha_vto_txt = fecha_vto.strftime("%Y-%m-%d") if fecha_vto is not None else None
+                tipo_factura = "abono_venta" if es_abono else "venta"
 
                 cursor.execute(
                     """
@@ -1470,7 +1473,7 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                     """,
                     (
                         empresa_id,
-                        "venta",
+                        tipo_factura,
                         "SER",
                         numero_factura,
                         tercero_id,
@@ -1483,30 +1486,41 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                         "IGIC",
                         igic_pct,
                         cuota,
-                        total,
+                        total_abs,
                         estado_factura,
                         forma_pago,
-                        f"Importado de Seralven | Cliente codigo: {_texto_limpio(row.get('cliente'))} | Empresa: {_texto_limpio(row.get('empresa'))}",
+                        f"Importado de Seralven | {'Abono/rectificativa' if es_abono else 'Factura de venta'} | Cliente codigo: {_texto_limpio(row.get('cliente'))} | Empresa: {_texto_limpio(row.get('empresa'))}",
                     ),
                 )
                 factura_id = cursor.fetchone()[0]
 
                 cuenta_cobro = "430 Clientes" if dias_vto > 0 else _cuenta_contrapartida_por_forma_pago("cliente", forma_pago)
+                tipo_asiento = "abono_importado_excel" if es_abono else "factura_importada_excel"
+                concepto_asiento = f"{'Abono' if es_abono else 'Factura venta'} {numero_factura} - {tercero}"
                 cursor.execute(
                     """
                     INSERT INTO asientos (fecha, concepto, tipo_operacion)
                     VALUES (%s, %s, %s)
                     RETURNING id
                     """,
-                    (fecha_txt, f"Factura venta {numero_factura} - {tercero}", "factura_importada_excel"),
+                    (fecha_txt, concepto_asiento, tipo_asiento),
                 )
                 asiento_id = cursor.fetchone()[0]
 
-                for cuenta, movimiento, importe_linea in [
-                    (cuenta_cobro, "debe", total),
-                    ("700 Ventas de mercaderias", "haber", base),
-                    ("477 Hacienda Publica, IGIC repercutido", "haber", cuota),
-                ]:
+                if es_abono:
+                    lineas_contables = [
+                        ("708 Devoluciones de ventas y operaciones similares", "debe", base),
+                        ("477 Hacienda Publica, IGIC repercutido", "debe", cuota),
+                        (cuenta_cobro, "haber", total_abs),
+                    ]
+                else:
+                    lineas_contables = [
+                        (cuenta_cobro, "debe", total_abs),
+                        ("700 Ventas de mercaderias", "haber", base),
+                        ("477 Hacienda Publica, IGIC repercutido", "haber", cuota),
+                    ]
+
+                for cuenta, movimiento, importe_linea in lineas_contables:
                     if importe_linea:
                         cursor.execute(
                             """
@@ -1524,7 +1538,7 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                     (importacion_id, asiento_id),
                 )
 
-                if fecha_vto_txt:
+                if fecha_vto_txt and not es_abono:
                     cursor.execute(
                         """
                         INSERT INTO vencimientos (
@@ -1543,8 +1557,8 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                             empresa_id,
                             factura_id,
                             fecha_vto_txt,
-                            total,
-                            total,
+                            total_abs,
+                            total_abs,
                             "pendiente",
                             "cobro",
                             tercero,

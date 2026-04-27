@@ -3466,6 +3466,9 @@ def formatear_importe_seguro(valor):
 def estado_factura_visual(estado, fecha_vencimiento=None):
     estado_txt = str(estado or "").strip().lower()
 
+    if estado_txt in ("abono", "rectificativa", "abonada"):
+        return "Abono", "badge-pagada"
+
     if estado_txt in ("pagada", "cobrada", "cobrado"):
         return "Pagada", "badge-pagada"
 
@@ -3601,7 +3604,7 @@ def generar_html_ficha_factura(factura):
     <body>
         <div class="sheet">
             <div class="header">
-                <h1>{'Factura emitida' if str(tipo).lower() == 'venta' else 'Ficha factura proveedor'}</h1>
+                <h1>{'Abono / rectificativa' if str(tipo).lower() in ('abono_venta', 'venta_rectificativa') else 'Factura emitida' if str(tipo).lower() == 'venta' else 'Ficha factura proveedor'}</h1>
                 <p>{numero}</p>
             </div>
 
@@ -3696,6 +3699,8 @@ def pantalla_facturas(cursor):
             compras += 1
         elif tipo_tmp == "venta":
             ventas += 1
+        elif tipo_tmp in ("abono_venta", "venta_rectificativa"):
+            ventas += 1
 
         estado_visual, _badge = estado_factura_visual(
             f.get("estado"),
@@ -3758,14 +3763,14 @@ def pantalla_facturas(cursor):
     with col_f1:
         filtro_tipo = st.selectbox(
             "Tipo",
-            ["Todos", "compra", "venta"],
+            ["Todos", "compra", "venta", "abono_venta"],
             key="facturas_filtro_tipo"
         )
 
     with col_f2:
         filtro_estado = st.selectbox(
             "Estado",
-            ["Todos", "Pendiente", "Pagada", "Vencida"],
+            ["Todos", "Pendiente", "Pagada", "Vencida", "Abono"],
             key="facturas_filtro_estado"
         )
 
@@ -3847,7 +3852,7 @@ def pantalla_facturas(cursor):
             "ID": f.get("id"),
             "Número": f.get("numero_factura") or f.get("numero") or f"Factura #{f.get('id')}",
             "Tipo": str(f.get("tipo") or f.get("tipo_factura") or "").strip().lower(),
-            "Tercero": f.get("cliente") or f.get("proveedor") or f.get("tercero") or "Sin tercero",
+            "Tercero": f.get("nombre_tercero") or f.get("cliente") or f.get("proveedor") or f.get("tercero") or "Sin tercero",
             "Fecha": f.get("fecha") or f.get("fecha_emision") or "",
             "Vencimiento": f.get("fecha_vencimiento") or f.get("vencimiento") or "",
             "Estado": f.get("_estado_visual"),
@@ -3974,7 +3979,7 @@ def pantalla_facturas(cursor):
     impuesto = factura.get("cuota_impuesto") or factura.get("cuota_iva") or factura.get("iva") or factura.get("impuesto") or 0
     origen = factura.get("origen") or factura.get("origen_documento") or factura.get("canal_origen") or ""
 
-    etiqueta_tipo = "Factura de compra" if tipo == "compra" else "Factura de venta" if tipo == "venta" else "Factura"
+    etiqueta_tipo = "Factura de compra" if tipo == "compra" else "Abono / rectificativa" if tipo in ("abono_venta", "venta_rectificativa") else "Factura de venta" if tipo == "venta" else "Factura"
 
     st.markdown("### Detalle de factura seleccionada")
 
