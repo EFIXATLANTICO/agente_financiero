@@ -38,12 +38,12 @@ def guardar_incidencia_importacion(
         cursor.execute("""
             SELECT id
             FROM incidencias_importacion
-            WHERE importacion_id = ?
-              AND tipo_importacion = ?
-              AND fila_excel = ?
-              AND COALESCE(fecha, '') = COALESCE(?, '')
-              AND COALESCE(concepto, '') = COALESCE(?, '')
-              AND COALESCE(detalle_error, '') = COALESCE(?, '')
+            WHERE importacion_id = %s
+              AND tipo_importacion = %s
+              AND fila_excel = %s
+              AND COALESCE(fecha, '') = COALESCE(%s, '')
+              AND COALESCE(concepto, '') = COALESCE(%s, '')
+              AND COALESCE(detalle_error, '') = COALESCE(%s, '')
             LIMIT 1
         """, (
             importacion_id,
@@ -71,7 +71,7 @@ def guardar_incidencia_importacion(
                 estado,
                 datos_json
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             importacion_id,
             tipo_importacion,
@@ -553,7 +553,7 @@ def registrar_importacion(tipo, nombre_archivo, hash_archivo):
     cursor.execute("""
     SELECT id
     FROM importaciones
-    WHERE hash_archivo = ?
+    WHERE hash_archivo = %s
     ORDER BY id DESC
     LIMIT 1
     """, (hash_archivo,))
@@ -565,7 +565,7 @@ def registrar_importacion(tipo, nombre_archivo, hash_archivo):
         cursor.execute("""
         SELECT COUNT(*)
         FROM asientos_importacion
-        WHERE importacion_id = ?
+        WHERE importacion_id = %s
         """, (importacion_id_existente,))
         total_asientos = cursor.fetchone()[0]
 
@@ -576,21 +576,22 @@ def registrar_importacion(tipo, nombre_archivo, hash_archivo):
 
         # Si no tiene asientos, era una importación fallida/incompleta:
         # la borramos y permitimos reintentar
-        cursor.execute("DELETE FROM importaciones WHERE id = ?", (importacion_id_existente,))
+        cursor.execute("DELETE FROM importaciones WHERE id = %s", (importacion_id_existente,))
         conn.commit()
 
     cursor.execute("""
     INSERT INTO importaciones (tipo, nombre_archivo, hash_archivo, fecha_importacion)
-    VALUES (?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s)
+    RETURNING id
     """, (
         tipo,
         nombre_archivo,
         hash_archivo,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     ))
-    conn.commit()
 
-    importacion_id = cursor.lastrowid
+    importacion_id = cursor.fetchone()[0]
+    conn.commit()
     conn.close()
 
     return importacion_id, "ok"
@@ -1304,6 +1305,7 @@ def borrar_asientos_importados_excel():
 
 def _parsear_dias_vencimiento(valor):
     texto = str(valor or "").strip().upper()
+    texto = texto.replace(" ", "")
 
     if texto.endswith("D"):
         try:
@@ -1312,6 +1314,273 @@ def _parsear_dias_vencimiento(valor):
             return 0
 
     return 0
+
+
+def _es_formato_seralven(df):
+    columnas = set(df.columns)
+    requeridas = {"codigo", "fecha", "razon social", "total", "forma pago", "vencimientos"}
+    return requeridas.issubset(columnas)
+
+
+def _asegurar_columnas_importacion_facturas(cursor):
+    migraciones = [
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS empresa_id INTEGER",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS importe_pendiente REAL DEFAULT 0",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS tipo TEXT",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS nombre_tercero TEXT",
+        "ALTER TABLE facturas ADD COLUMN IF NOT EXISTS empresa_id INTEGER",
+        "ALTER TABLE facturas ADD COLUMN IF NOT EXISTS forma_pago TEXT",
+        "ALTER TABLE facturas ADD COLUMN IF NOT EXISTS observaciones TEXT",
+    ]
+
+    for sql in migraciones:
+        cursor.execute(sql)
+
+
+def _numero_seralven(valor):
+    texto = _texto_limpio(valor)
+    if texto.endswith(".0"):
+        texto = texto[:-2]
+    if texto.isdigit() and len(texto) < 5:
+        return texto.zfill(5)
+    return texto
+
+
+def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
+    from db_context import obtener_empresa_id_activa
+
+    hash_archivo = calcular_hash_archivo(archivo_bytes)
+    importacion_id, estado = registrar_importacion("facturas_seralven", nombre_archivo, hash_archivo)
+
+    if estado == "duplicado":
+        return {"ok": False, "estado": "duplicado"}
+
+    empresa_id = obtener_empresa_id_activa()
+    igic_pct = float(opciones.get("igic_por_defecto", 7.0) or 7.0)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    _asegurar_columnas_importacion_facturas(cursor)
+
+    importadas = 0
+    errores = []
+
+    def registrar_error(fila_excel, fecha, concepto, mensaje, datos=None):
+        error_dict = {
+            "fila_excel": fila_excel,
+            "fecha": fecha,
+            "numero_factura": concepto,
+            "error": mensaje,
+        }
+        errores.append(error_dict)
+        guardar_incidencia_importacion(
+            importacion_id=importacion_id,
+            tipo_importacion="facturas_seralven",
+            fila_excel=fila_excel,
+            fecha=fecha,
+            concepto=concepto,
+            detalle_error=mensaje,
+            datos=datos or error_dict,
+            conn=conn,
+            cursor=cursor,
+        )
+
+    try:
+        for idx, row in df.iterrows():
+            fila_excel = int(idx) + 2
+            numero_factura = _numero_seralven(row.get("codigo"))
+            try:
+                fecha = pd.to_datetime(row.get("fecha"), errors="coerce", dayfirst=True)
+                if pd.isna(fecha):
+                    raise ValueError("Fecha invalida")
+
+                tercero = _texto_limpio(row.get("razon social"))
+                if not tercero:
+                    raise ValueError("Cliente vacio")
+
+                total = round(_parsear_importe_excel(row.get("total")), 2)
+                if total <= 0:
+                    raise ValueError("Importe negativo o cero: revisar como abono/rectificacion")
+
+                base = round(total / (1 + igic_pct / 100), 2)
+                cuota = round(total - base, 2)
+                fecha_txt = fecha.strftime("%Y-%m-%d")
+                forma_pago = _texto_limpio(row.get("forma pago"), "credito").lower()
+                dias_vto = _parsear_dias_vencimiento(row.get("vencimientos"))
+                fecha_vto = fecha + pd.Timedelta(days=dias_vto) if dias_vto > 0 else None
+                concepto = _texto_limpio(row.get("observaciones"), f"Factura {numero_factura} - {tercero}")
+
+                cursor.execute(
+                    """
+                    SELECT id
+                    FROM clientes
+                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
+                    LIMIT 1
+                    """,
+                    (tercero,),
+                )
+                fila_cliente = cursor.fetchone()
+
+                if fila_cliente:
+                    tercero_id = int(fila_cliente[0])
+                else:
+                    cursor.execute(
+                        """
+                        INSERT INTO clientes (nombre, nif, direccion, email, telefono)
+                        VALUES (%s, %s, %s, %s, %s)
+                        RETURNING id
+                        """,
+                        (
+                            tercero,
+                            "",
+                            _texto_limpio(row.get("direccion")),
+                            "",
+                            "",
+                        ),
+                    )
+                    tercero_id = cursor.fetchone()[0]
+
+                estado_factura = "pendiente" if dias_vto > 0 else "pagada"
+                fecha_vto_txt = fecha_vto.strftime("%Y-%m-%d") if fecha_vto is not None else None
+
+                cursor.execute(
+                    """
+                    INSERT INTO facturas (
+                        empresa_id,
+                        tipo,
+                        serie,
+                        numero_factura,
+                        tercero_id,
+                        nombre_tercero,
+                        fecha_emision,
+                        fecha_operacion,
+                        fecha_vencimiento,
+                        concepto,
+                        base_imponible,
+                        tipo_impuesto,
+                        impuesto_pct,
+                        cuota_impuesto,
+                        total,
+                        estado,
+                        forma_pago,
+                        observaciones
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                    """,
+                    (
+                        empresa_id,
+                        "venta",
+                        "SER",
+                        numero_factura,
+                        tercero_id,
+                        tercero,
+                        fecha_txt,
+                        fecha_txt,
+                        fecha_vto_txt,
+                        concepto,
+                        base,
+                        "IGIC",
+                        igic_pct,
+                        cuota,
+                        total,
+                        estado_factura,
+                        forma_pago,
+                        f"Importado de Seralven | Cliente codigo: {_texto_limpio(row.get('cliente'))} | Empresa: {_texto_limpio(row.get('empresa'))}",
+                    ),
+                )
+                factura_id = cursor.fetchone()[0]
+
+                cuenta_cobro = "430 Clientes" if dias_vto > 0 else _cuenta_contrapartida_por_forma_pago("cliente", forma_pago)
+                cursor.execute(
+                    """
+                    INSERT INTO asientos (fecha, concepto, tipo_operacion)
+                    VALUES (%s, %s, %s)
+                    RETURNING id
+                    """,
+                    (fecha_txt, f"Factura venta {numero_factura} - {tercero}", "factura_importada_excel"),
+                )
+                asiento_id = cursor.fetchone()[0]
+
+                for cuenta, movimiento, importe_linea in [
+                    (cuenta_cobro, "debe", total),
+                    ("700 Ventas de mercaderias", "haber", base),
+                    ("477 Hacienda Publica, IGIC repercutido", "haber", cuota),
+                ]:
+                    if importe_linea:
+                        cursor.execute(
+                            """
+                            INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
+                            VALUES (%s, %s, %s, %s)
+                            """,
+                            (asiento_id, cuenta, movimiento, float(importe_linea)),
+                        )
+
+                cursor.execute(
+                    """
+                    INSERT INTO asientos_importacion (importacion_id, asiento_id)
+                    VALUES (%s, %s)
+                    """,
+                    (importacion_id, asiento_id),
+                )
+
+                if fecha_vto_txt:
+                    cursor.execute(
+                        """
+                        INSERT INTO vencimientos (
+                            empresa_id,
+                            factura_id,
+                            fecha_vencimiento,
+                            importe,
+                            importe_pendiente,
+                            estado,
+                            tipo,
+                            nombre_tercero
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            empresa_id,
+                            factura_id,
+                            fecha_vto_txt,
+                            total,
+                            total,
+                            "pendiente",
+                            "cobro",
+                            tercero,
+                        ),
+                    )
+
+                importadas += 1
+
+            except Exception as e:
+                registrar_error(
+                    fila_excel=fila_excel,
+                    fecha=str(row.get("fecha", "") or ""),
+                    concepto=numero_factura,
+                    mensaje=str(e),
+                    datos={
+                        "codigo": numero_factura,
+                        "cliente": _texto_limpio(row.get("razon social")),
+                        "total": _hacer_json_serializable(row.get("total")),
+                    },
+                )
+
+        conn.commit()
+        return {
+            "ok": True,
+            "estado": "ok",
+            "importadas": importadas,
+            "errores": errores,
+            "num_errores": len(errores),
+        }
+
+    except Exception as e:
+        conn.rollback()
+        return {"ok": False, "estado": "error", "detalle": str(e)}
+
+    finally:
+        conn.close()
 
 
 def _cuenta_contrapartida_por_forma_pago(tipo_tercero, forma_pago):
@@ -1356,6 +1625,9 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
     from db_context import obtener_empresa_id_activa
     from contabilidad import crear_asiento_completo
     from operaciones_inteligentes import registrar_operacion_bd
+
+    if _es_formato_seralven(df):
+        return importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones)
 
     hash_archivo = calcular_hash_archivo(archivo_bytes)
     importacion_id, estado = registrar_importacion("facturas", nombre_archivo, hash_archivo)
