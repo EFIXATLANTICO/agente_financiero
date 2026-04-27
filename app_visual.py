@@ -1087,7 +1087,7 @@ def calcular_resumen_igic_por_trimestres(cursor, year=None):
         4: {"repercutido": 0.0, "soportado": 0.0},
     }
 
-    for fecha, cuenta, movimiento, importe in lineas:
+    for _asiento_id, fecha, cuenta, movimiento, importe in lineas:
         trimestre = obtener_trimestre_desde_fecha(fecha)
 
         if trimestre is None:
@@ -1189,11 +1189,20 @@ def pantalla_resumen_financiero(cursor):
     st.markdown('<div class="block-chip">Indicadores</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Resumen financiero</div>', unsafe_allow_html=True)
 
-    cursor.execute("""
-    SELECT cuenta, movimiento, importe
-    FROM lineas_asiento
-    """)
-    lineas = cursor.fetchall()
+    conexion_resumen = get_connection()
+    cursor_resumen = conexion_resumen.cursor()
+
+    try:
+        cursor_resumen.execute("""
+        SELECT cuenta, movimiento, importe
+        FROM lineas_asiento
+        """)
+        lineas = cursor_resumen.fetchall()
+
+        year_actual = datetime.datetime.today().year
+        resumen_igic_trimestres = calcular_resumen_igic_por_trimestres(cursor_resumen, year_actual)
+    finally:
+        conexion_resumen.close()
 
     ventas = 0
     compras = 0
@@ -1202,9 +1211,6 @@ def pantalla_resumen_financiero(cursor):
     bancos = 0
     clientes = 0
     proveedores = 0
-
-    year_actual = datetime.datetime.today().year
-    resumen_igic_trimestres = calcular_resumen_igic_por_trimestres(cursor, year_actual)
 
     for cuenta, movimiento, importe in lineas:
         cuenta = str(cuenta).strip()
@@ -1609,7 +1615,7 @@ def obtener_sentido_tesoreria_asiento(cursor, asiento_id):
     cursor.execute("""
         SELECT cuenta, movimiento, importe
         FROM lineas_asiento
-        WHERE asiento_id = ?
+        WHERE asiento_id = %s
     """, (asiento_id,))
 
     lineas = cursor.fetchall()
@@ -1859,7 +1865,7 @@ def existe_fianza_asociada(asiento_id, concepto_origen):
             SELECT id
             FROM asientos
             WHERE tipo_operacion = 'fianza_recibida'
-              AND concepto = ?
+              AND concepto = %s
             LIMIT 1
         """, (concepto_fianza,))
 
@@ -1893,7 +1899,7 @@ def existe_devolucion_fianza_asociada(asiento_id, concepto_origen):
             SELECT id
             FROM asientos
             WHERE tipo_operacion = 'fianza_devuelta'
-              AND concepto LIKE ?
+              AND concepto LIKE %s
             LIMIT 1
         """, (f"%asiento origen {asiento_id} - %",))
 
@@ -1909,7 +1915,7 @@ def inicializar_revision_fianzas():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS revision_fianzas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             asiento_origen_id INTEGER UNIQUE,
             estado TEXT,
             comentario TEXT,
@@ -1930,7 +1936,7 @@ def obtener_estado_revision_fianza(asiento_origen_id):
     cursor.execute("""
         SELECT estado, comentario
         FROM revision_fianzas
-        WHERE asiento_origen_id = ?
+        WHERE asiento_origen_id = %s
         LIMIT 1
     """, (asiento_origen_id,))
 
@@ -1951,7 +1957,7 @@ def guardar_estado_revision_fianza(asiento_origen_id, estado, comentario=""):
 
     cursor.execute("""
         INSERT INTO revision_fianzas (asiento_origen_id, estado, comentario, creado_en)
-        VALUES (?, ?, ?, datetime('now'))
+        VALUES (%s, %s, %s, CURRENT_TIMESTAMP)
         ON CONFLICT(asiento_origen_id)
         DO UPDATE SET
             estado = excluded.estado,
@@ -1969,7 +1975,7 @@ def borrar_estado_revision_fianza(asiento_origen_id):
 
     cursor.execute("""
         DELETE FROM revision_fianzas
-        WHERE asiento_origen_id = ?
+        WHERE asiento_origen_id = %s
     """, (asiento_origen_id,))
 
     conn.commit()
@@ -2569,7 +2575,7 @@ def pantalla_libro_diario(cursor):
         cursor.execute("""
             SELECT id, fecha, concepto, tipo_operacion
             FROM asientos
-            WHERE tipo_operacion = ?
+            WHERE tipo_operacion = %s
             ORDER BY id ASC
         """, (filtro_tipo,))
 
@@ -2614,9 +2620,9 @@ def pantalla_libro_diario(cursor):
         cursor.execute("""
             SELECT SUM(importe)
             FROM lineas_asiento
-            WHERE asiento_id = ?
-              AND movimiento = 'debe'
-        """, (asiento_id,))
+            WHERE asiento_id = %s
+              AND movimiento = %s
+        """, (asiento_id, "debe"))
         total_debe = cursor.fetchone()[0] or 0.0
 
         if float(total_debe) < float(importe_minimo):
@@ -2670,7 +2676,7 @@ def pantalla_libro_diario(cursor):
             cursor.execute("""
                 SELECT cuenta, movimiento, importe
                 FROM lineas_asiento
-                WHERE asiento_id = ?
+                WHERE asiento_id = %s
             """, (asiento_id,))
             lineas = cursor.fetchall()
 
@@ -2819,7 +2825,7 @@ def inicializar_incidencias_control_revisadas():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS incidencias_control_revisadas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             asiento_id INTEGER,
             tipo_incidencia TEXT,
             detalle TEXT,
@@ -2840,9 +2846,9 @@ def incidencia_control_ya_revisada(asiento_id, tipo_incidencia, detalle):
     cursor.execute("""
         SELECT id
         FROM incidencias_control_revisadas
-        WHERE asiento_id = ?
-          AND tipo_incidencia = ?
-          AND detalle = ?
+        WHERE asiento_id = %s
+          AND tipo_incidencia = %s
+          AND detalle = %s
         LIMIT 1
     """, (int(asiento_id), str(tipo_incidencia), str(detalle)))
 
@@ -2865,7 +2871,7 @@ def marcar_incidencia_control_revisada(asiento_id, tipo_incidencia, detalle):
             detalle,
             revisada_en
         )
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
     """, (
         int(asiento_id),
         str(tipo_incidencia),
@@ -2887,9 +2893,9 @@ def quitar_incidencia_control_revisada(asiento_id, tipo_incidencia, detalle):
 
     cursor.execute("""
         DELETE FROM incidencias_control_revisadas
-        WHERE asiento_id = ?
-          AND tipo_incidencia = ?
-          AND detalle = ?
+        WHERE asiento_id = %s
+          AND tipo_incidencia = %s
+          AND detalle = %s
     """, (
         int(asiento_id),
         str(tipo_incidencia),
@@ -2908,8 +2914,8 @@ def actualizar_asiento_y_lineas(asiento_id, nueva_fecha, nuevo_concepto, lineas_
     try:
         cursor.execute("""
             UPDATE asientos
-            SET fecha = ?, concepto = ?
-            WHERE id = ?
+            SET fecha = %s, concepto = %s
+            WHERE id = %s
         """, (
             str(nueva_fecha),
             str(nuevo_concepto),
@@ -2918,7 +2924,7 @@ def actualizar_asiento_y_lineas(asiento_id, nueva_fecha, nuevo_concepto, lineas_
 
         cursor.execute("""
             DELETE FROM lineas_asiento
-            WHERE asiento_id = ?
+            WHERE asiento_id = %s
         """, (int(asiento_id),))
 
         for linea in lineas_editadas:
@@ -2937,7 +2943,7 @@ def actualizar_asiento_y_lineas(asiento_id, nueva_fecha, nuevo_concepto, lineas_
 
             cursor.execute("""
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             """, (
                 int(asiento_id),
                 cuenta,
@@ -3118,7 +3124,7 @@ def pantalla_control_contable():
                     cursor.execute("""
                         SELECT id, fecha, concepto, tipo_operacion
                         FROM asientos
-                        WHERE id = ?
+                        WHERE id = %s
                         LIMIT 1
                     """, (asiento_id_sel,))
                     asiento = cursor.fetchone()
@@ -3135,7 +3141,7 @@ def pantalla_control_contable():
                         cursor.execute("""
                             SELECT cuenta, movimiento, importe
                             FROM lineas_asiento
-                            WHERE asiento_id = ?
+                            WHERE asiento_id = %s
                         """, (asiento_id_sel,))
                         lineas = cursor.fetchall()
 
@@ -3506,7 +3512,7 @@ def generar_html_ficha_factura(factura):
     estado = factura.get("estado") or "pendiente"
     tipo = factura.get("tipo") or factura.get("tipo_factura") or "compra"
     base = factura.get("base_imponible") or factura.get("base") or 0
-    cuota = factura.get("cuota_iva") or factura.get("iva") or factura.get("impuesto") or 0
+    cuota = factura.get("cuota_impuesto") or factura.get("cuota_iva") or factura.get("iva") or factura.get("impuesto") or 0
     total = factura.get("total") or factura.get("importe_total") or factura.get("importe") or 0
     forma_pago = factura.get("forma_pago") or factura.get("metodo_pago") or ""
     referencia = factura.get("referencia") or ""
@@ -3965,7 +3971,7 @@ def pantalla_facturas(cursor):
     referencia = factura.get("referencia") or ""
     forma_pago = factura.get("forma_pago") or factura.get("metodo_pago") or ""
     base = factura.get("base_imponible") or factura.get("base") or 0
-    impuesto = factura.get("cuota_iva") or factura.get("iva") or factura.get("impuesto") or 0
+    impuesto = factura.get("cuota_impuesto") or factura.get("cuota_iva") or factura.get("iva") or factura.get("impuesto") or 0
     origen = factura.get("origen") or factura.get("origen_documento") or factura.get("canal_origen") or ""
 
     etiqueta_tipo = "Factura de compra" if tipo == "compra" else "Factura de venta" if tipo == "venta" else "Factura"
@@ -6407,7 +6413,7 @@ def borrar_estado_revision_fianza(asiento_origen_id):
 
     cursor.execute("""
         DELETE FROM revision_fianzas
-        WHERE asiento_origen_id = ?
+        WHERE asiento_origen_id = %s
     """, (asiento_origen_id,))
 
     conn.commit()

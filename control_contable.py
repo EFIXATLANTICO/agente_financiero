@@ -29,7 +29,7 @@ def revisar_asientos():
         cursor.execute("""
         SELECT cuenta, movimiento, importe
         FROM lineas_asiento
-        WHERE asiento_id = ?
+        WHERE asiento_id = %s
         """, (asiento_id,))
 
         lineas = cursor.fetchall()
@@ -149,12 +149,12 @@ def validar_sistema_completo():
                 a.fecha,
                 a.concepto,
                 a.tipo_operacion,
-                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe ELSE 0 END), 0), 2) AS total_debe,
-                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe ELSE 0 END), 0), 2) AS total_haber
+                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe ELSE 0 END), 0)::numeric, 2) AS total_debe,
+                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe ELSE 0 END), 0)::numeric, 2) AS total_haber
             FROM asientos a
             JOIN lineas_asiento l ON a.id = l.asiento_id
             GROUP BY a.id, a.fecha, a.concepto, a.tipo_operacion
-            HAVING ROUND(total_debe - total_haber, 2) != 0
+            HAVING ROUND((COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe ELSE 0 END), 0))::numeric, 2) != 0
             ORDER BY a.id
         """)
         for asiento_id, fecha, concepto, tipo_operacion, total_debe, total_haber in cursor.fetchall():
@@ -203,7 +203,7 @@ def validar_sistema_completo():
                     WHEN movimiento = 'debe' THEN importe
                     WHEN movimiento = 'haber' THEN -importe
                     ELSE 0
-                END), 2) AS saldo
+                END)::numeric, 2) AS saldo
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '43%'
             GROUP BY cuenta_base
@@ -229,7 +229,7 @@ def validar_sistema_completo():
                     WHEN movimiento = 'haber' THEN importe
                     WHEN movimiento = 'debe' THEN -importe
                     ELSE 0
-                END), 2) AS saldo
+                END)::numeric, 2) AS saldo
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '40%'
             GROUP BY cuenta_base
@@ -253,7 +253,7 @@ def validar_sistema_completo():
                 WHEN movimiento = 'debe' THEN importe
                 WHEN movimiento = 'haber' THEN -importe
                 ELSE 0
-            END), 2)
+            END)::numeric, 2)
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '570%'
         """)
@@ -276,7 +276,7 @@ def validar_sistema_completo():
                 WHEN movimiento = 'debe' THEN importe
                 WHEN movimiento = 'haber' THEN -importe
                 ELSE 0
-            END), 2)
+            END)::numeric, 2)
             FROM lineas_asiento
             WHERE TRIM(cuenta) LIKE '572%'
         """)
@@ -313,7 +313,7 @@ def validar_sistema_completo():
                 SELECT id
                 FROM asientos
                 WHERE tipo_operacion = 'fianza_recibida'
-                  AND concepto = ?
+                  AND concepto = %s
                 LIMIT 1
             """, (concepto_referencia,))
             previa = cursor.fetchone()
@@ -407,7 +407,7 @@ def reset_contabilidad():
                 SELECT id
                 FROM asientos
                 WHERE tipo_operacion = 'fianza_recibida'
-                  AND concepto = ?
+                  AND concepto = %s
                 LIMIT 1
             """, (concepto_referencia,))
             previa = cursor.fetchone()
