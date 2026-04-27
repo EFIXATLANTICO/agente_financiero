@@ -51,7 +51,12 @@ def crear_datos_demo():
 st.set_page_config(
     page_title="EFIX ATLÁNTICO",
     page_icon="📘",
-    layout="wide"
+    layout="wide",
+    menu_items={
+        "Get Help": None,
+        "Report a bug": None,
+        "About": "eFix Atlantico"
+    }
 )
 
 # ----------------------------
@@ -79,12 +84,12 @@ def main():
         pantalla_selector_empresa()
         return
 
+    crear_datos_demo()
+
     # ----------------------------
     # APP PRINCIPAL
     # ----------------------------
     mostrar_app()
-
-    crear_datos_demo()
 
 # ----------------------------
 # ENTRYPOINT

@@ -190,12 +190,16 @@ def aplicar_estilo(modo="app"):
         }
 
         [data-testid="stHeader"] {
-            background: rgba(248, 251, 255, 0.45);
-            backdrop-filter: blur(14px);
+            background: transparent;
+            height: 0 !important;
         }
 
         [data-testid="stToolbar"] {
-            top: 0.4rem;
+            display: none !important;
+        }
+
+        #MainMenu, footer, [data-testid="stDecoration"], [data-testid="stStatusWidget"] {
+            display: none !important;
         }
 
         .main > div {
@@ -204,7 +208,7 @@ def aplicar_estilo(modo="app"):
 
         .block-container {
             max-width: 96%;
-            padding-top: 3.5rem;
+            padding-top: 1.4rem;
             padding-bottom: 2rem;
         }
 
@@ -5997,7 +6001,7 @@ def mostrar_app():
     empresa_activa = st.session_state["empresa_activa"]
 
     with st.sidebar:
-        mostrar_logo_efix(width=740, centrado=True)
+        mostrar_logo_efix(width=150, centrado=True)
         st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
         st.markdown("### Navegación")
         bloque = st.radio(

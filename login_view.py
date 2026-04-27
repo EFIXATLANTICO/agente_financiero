@@ -1,4 +1,4 @@
-import os
+﻿import os
 import streamlit as st
 from auth_empresas import autenticar, empresas_de_usuario
 from db_context import set_active_db_path, clear_active_db_path
@@ -167,8 +167,7 @@ def mostrar_logo_login_efix():
     col1, col2, col3 = st.columns([1, 2, 1])
 
     with col2:
-        st.image(ruta_logo, width=420)
-        st.caption("Acceso a tu entorno contable")
+        st.image(ruta_logo, width=260)
 
 
 def _obtener_logo_efix():
@@ -271,19 +270,23 @@ def aplicar_estilo_login():
             display: none !important;
         }}
 
+        #MainMenu, footer, [data-testid="stDecoration"], [data-testid="stStatusWidget"] {{
+            display: none !important;
+        }}
+
         [data-testid="collapsedControl"] {{
             display: none !important;
         }}
 
         .block-container {{
             max-width: 1050px;
-            padding-top: 1rem !important;
+            padding-top: 2rem !important;
             padding-bottom: 2rem;
         }}
 
         .login-shell {{
             max-width: 560px;
-            margin: 2.2rem auto 0 auto;
+            margin: 1.2rem auto 0 auto;
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.10) 100%);
             border: 1px solid rgba(255,255,255,0.16);
@@ -363,11 +366,42 @@ def aplicar_estilo_login():
 
         .login-mini {{
             text-align: center;
-            color: rgba(255,255,255,0.72);
+            color: rgba(255,255,255,0.86);
             font-size: 0.95rem;
             margin-top: 1rem;
             position: relative;
             z-index: 2;
+        }}
+
+        .login-trust {{
+            color: rgba(255,255,255,0.82);
+            font-size: 0.84rem;
+            text-align: center;
+            margin-top: 0.8rem;
+            line-height: 1.45;
+            position: relative;
+            z-index: 2;
+        }}
+
+        @media (max-width: 640px) {{
+            .block-container {{
+                padding: 1rem 1rem 1.5rem 1rem !important;
+            }}
+
+            .login-shell {{
+                margin-top: 0.6rem;
+                padding: 1.35rem 1.1rem 1.2rem 1.1rem;
+                border-radius: 24px;
+            }}
+
+            .login-title {{
+                font-size: 1.72rem;
+            }}
+
+            .login-subtitle {{
+                font-size: 0.95rem;
+                margin-bottom: 1rem;
+            }}
         }}
     </style>
     """, unsafe_allow_html=True)
@@ -380,17 +414,29 @@ def pantalla_login():
 
     mostrar_logo_login_efix()
 
+    st.markdown('<div class="login-mini">Acceso privado para usuarios autorizados</div>', unsafe_allow_html=True)
     st.markdown('<div class="login-title">Bienvenido a eFix</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="login-subtitle">Tu entorno contable con una experiencia más visual, clara y moderna.</div>',
+        '<div class="login-subtitle">Controla facturas, bancos, IGIC y resultados desde un panel financiero claro.</div>',
         unsafe_allow_html=True
     )
 
-    usuario = st.text_input("Usuario")
-    password = st.text_input("Contraseña", type="password")
+    usuario = st.text_input("Usuario", autocomplete="username")
+    password = st.text_input("Contraseña", type="password", autocomplete="current-password")
 
     if st.button("Entrar"):
-        user = autenticar(usuario, password)
+        usuario_limpio = (usuario or "").strip()
+        password_limpio = (password or "").strip()
+
+        if not usuario_limpio or not password_limpio:
+            st.warning("Introduce usuario y contraseña para acceder.")
+            st.markdown('</div>', unsafe_allow_html=True)
+            return
+
+        with st.spinner("Verificando acceso..."):
+            user = autenticar(usuario_limpio, password_limpio)
+            if not user and usuario_limpio.lower() != usuario_limpio:
+                user = autenticar(usuario_limpio.lower(), password_limpio)
 
         if not user:
             st.error("Usuario o contraseña incorrectos")
@@ -404,12 +450,11 @@ def pantalla_login():
         st.session_state["usuario"] = user
         st.rerun()
 
-    st.markdown('<div class="login-mini">Accede a tu entorno de trabajo financiero.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-trust">Tus datos permanecen en un entorno privado de trabajo. Si no tienes acceso, contacta con el administrador.</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-
 def pantalla_selector_empresa():
-    st.subheader("Seleccionar empresa")
+    aplicar_estilo_login()
 
     usuario = st.session_state.get("usuario")
     if not usuario or "id" not in usuario:
@@ -422,18 +467,33 @@ def pantalla_selector_empresa():
         st.warning("No tienes empresas asignadas.")
         st.stop()
 
+    if len(filas) == 1:
+        empresa = filas[0]
+        st.session_state["empresa_activa"] = empresa
+        set_active_db_path(empresa["db_path"])
+        st.rerun()
+
     opciones = {
         empresa["nombre"]: empresa
         for empresa in filas
     }
 
-    seleccion = st.selectbox("Empresa", list(opciones.keys()))
+    st.markdown('<div class="login-shell">', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">Selecciona empresa</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="login-subtitle">Elige el entorno sobre el que quieres trabajar.</div>',
+        unsafe_allow_html=True
+    )
+
+    seleccion = st.selectbox("Empresa", list(opciones.keys()), label_visibility="collapsed")
 
     if st.button("Continuar"):
         empresa = opciones[seleccion]
         st.session_state["empresa_activa"] = empresa
         set_active_db_path(empresa["db_path"])
         st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def logout():

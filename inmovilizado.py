@@ -1,4 +1,3 @@
-import sqlite3
 from datetime import datetime
 from calendar import monthrange
 import pandas as pd
@@ -11,7 +10,7 @@ def inicializar_tabla_inmovilizado():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS inmovilizado (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         nombre TEXT NOT NULL,
         fecha_compra TEXT NOT NULL,
         fecha_inicio_amortizacion TEXT NOT NULL,
@@ -30,7 +29,7 @@ def inicializar_tabla_inmovilizado():
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS amortizaciones_generadas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         bien_id INTEGER NOT NULL,
         ejercicio INTEGER NOT NULL,
         mes INTEGER NOT NULL,
@@ -140,7 +139,8 @@ def alta_inmovilizado(
         activo,
         observaciones
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 1, ?)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 0, 1, %s)
+    RETURNING id
     """, (
         nombre.strip(),
         fecha_compra,
@@ -155,8 +155,8 @@ def alta_inmovilizado(
         observaciones
     ))
 
+    bien_id = cursor.fetchone()[0]
     conexion.commit()
-    bien_id = cursor.lastrowid
     conexion.close()
 
     return bien_id
@@ -219,7 +219,7 @@ def obtener_bien(bien_id):
         activo,
         observaciones
     FROM inmovilizado
-    WHERE id = ?
+    WHERE id = %s
     """, (bien_id,))
 
     fila = cursor.fetchone()
@@ -245,7 +245,7 @@ def baja_inmovilizado(bien_id):
     cursor.execute("""
     UPDATE inmovilizado
     SET activo = 0
-    WHERE id = ?
+    WHERE id = %s
     """, (bien_id,))
 
     conexion.commit()
@@ -262,7 +262,7 @@ def ya_generada_amortizacion(bien_id, ejercicio, mes):
     cursor.execute("""
     SELECT id
     FROM amortizaciones_generadas
-    WHERE bien_id = ? AND ejercicio = ? AND mes = ?
+    WHERE bien_id = %s AND ejercicio = %s AND mes = %s
     """, (bien_id, ejercicio, mes))
 
     existe = cursor.fetchone() is not None
@@ -328,17 +328,18 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
     try:
         cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
+        RETURNING id
         """, (
             fecha_asiento,
             f"Amortización {ejercicio}-{mes:02d} - {bien['nombre']}",
             "amortizacion"
         ))
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         cursor.execute("""
         INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
         """, (
             asiento_id,
             bien["cuenta_gasto_amortizacion"],
@@ -348,7 +349,7 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
 
         cursor.execute("""
         INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-        VALUES (?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s)
         """, (
             asiento_id,
             bien["cuenta_amort_acumulada"],
@@ -358,15 +359,15 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
 
         cursor.execute("""
         UPDATE inmovilizado
-        SET amortizacion_acumulada = ROUND(amortizacion_acumulada + ?, 2)
-        WHERE id = ?
+        SET amortizacion_acumulada = ROUND((amortizacion_acumulada + %s)::numeric, 2)
+        WHERE id = %s
         """, (importe, bien_id))
 
         cursor.execute("""
         INSERT INTO amortizaciones_generadas (
             bien_id, ejercicio, mes, fecha_asiento, asiento_id, importe
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s)
         """, (bien_id, ejercicio, mes, fecha_asiento, asiento_id, importe))
 
         conexion.commit()
@@ -427,7 +428,7 @@ def historial_amortizaciones(bien_id=None):
     params = []
 
     if bien_id is not None:
-        query += " WHERE ag.bien_id = ? "
+        query += " WHERE ag.bien_id = %s "
         params.append(bien_id)
 
     query += " ORDER BY ag.ejercicio DESC, ag.mes DESC, ag.id DESC "
