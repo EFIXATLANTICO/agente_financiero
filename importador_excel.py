@@ -135,11 +135,11 @@ def obtener_incidencias_importacion(estado=None, tipo_importacion=None):
     params = []
 
     if estado and estado != "todas":
-        query += " AND estado = ?"
+        query += " AND estado = %s"
         params.append(estado)
 
     if tipo_importacion and tipo_importacion != "todos":
-        query += " AND tipo_importacion = ?"
+        query += " AND tipo_importacion = %s"
         params.append(tipo_importacion)
 
     query += " ORDER BY id DESC"
@@ -161,7 +161,7 @@ def marcar_incidencia_revisada(incidencia_id):
     cursor.execute("""
     UPDATE incidencias_importacion
     SET estado = 'revisada'
-    WHERE id = ?
+    WHERE id = %s
     """, (incidencia_id,))
 
     conn.commit()
@@ -170,11 +170,35 @@ def marcar_incidencia_revisada(incidencia_id):
     return "ok"
 
 
+def cambiar_estado_incidencia_importacion(incidencia_id, estado):
+    estado = (estado or "").strip().lower()
+    if estado not in ("pendiente", "revisada"):
+        return {"ok": False, "mensaje": "Estado de incidencia no valido"}
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+        UPDATE incidencias_importacion
+        SET estado = %s
+        WHERE id = %s
+        """, (estado, incidencia_id))
+
+        conn.commit()
+        return {"ok": True, "mensaje": f"Incidencia marcada como {estado}"}
+    except Exception as e:
+        conn.rollback()
+        return {"ok": False, "mensaje": str(e)}
+    finally:
+        conn.close()
+
+
 def borrar_incidencia_importacion(incidencia_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("DELETE FROM incidencias_importacion WHERE id = ?", (incidencia_id,))
+    cursor.execute("DELETE FROM incidencias_importacion WHERE id = %s", (incidencia_id,))
     conn.commit()
     conn.close()
 

@@ -38,6 +38,7 @@ from importador_excel import (
     borrar_asientos_importados_excel,
     obtener_incidencias_importacion,
     marcar_incidencia_revisada,
+    cambiar_estado_incidencia_importacion,
     borrar_incidencia_importacion,
     importar_pagos_proveedor_desde_excel,
     limpiar_historico_importaciones,
@@ -2692,6 +2693,9 @@ def pantalla_libro_diario(cursor):
 
             analisis_fianza = analizar_asiento_fianza(cursor, asiento_id, fecha, concepto)
             es_asiento_ya_fianza = tipo_operacion in ("fianza_recibida", "fianza_devuelta")
+            if analisis_fianza.get("es_fianza") and analisis_fianza.get("tipo") == "fianza_recibida":
+                mostrar_aviso_fianza = True
+                asiento_fianza_existente = existe_fianza_asociada(asiento_id, concepto)
 
             if mostrar_aviso_fianza and not es_asiento_ya_fianza:
                 st.warning(
@@ -5928,7 +5932,8 @@ def mostrar_bloque_contabilidad(cursor):
             "Cuenta de resultados",
             "Balance de situación",
             "Control contable",
-            "Asiento de apertura"
+            "Asiento de apertura",
+            "Fianzas detectadas"
         ],
         horizontal=True
     )
@@ -5947,6 +5952,8 @@ def mostrar_bloque_contabilidad(cursor):
         pantalla_control_contable()
     elif seccion == "Asiento de apertura":
         pantalla_apertura_pdf()
+    elif seccion == "Fianzas detectadas":
+        pantalla_fianzas_detectadas(cursor)
     elif opcion == "Clientes":
         from clientes import pantalla_clientes
         pantalla_clientes()
@@ -6216,7 +6223,7 @@ def pantalla_incidencias_importacion():
         estado = st.selectbox(
             "Estado",
             ["todas", "pendiente", "revisada"],
-            index=1,
+            index=0,
             key="inc_estado"
         )
 
@@ -6368,7 +6375,7 @@ def pantalla_incidencias_importacion():
     # =========================
     st.markdown("## 6) Acciones")
 
-    a1, a2, a3 = st.columns(3)
+    a1, a2, a3, a4 = st.columns(4)
 
     with a1:
         if st.button("Marcar como revisada", key=f"rev_{incidencia_id}"):
@@ -6389,6 +6396,15 @@ def pantalla_incidencias_importacion():
                 st.error(f"No se pudo marcar como revisada: {e}")
 
     with a2:
+        if st.button("Reabrir como pendiente", key=f"pend_{incidencia_id}"):
+            resultado_pendiente = cambiar_estado_incidencia_importacion(incidencia_id, "pendiente")
+            if resultado_pendiente.get("ok"):
+                st.success(resultado_pendiente["mensaje"])
+                st.rerun()
+            else:
+                st.error(resultado_pendiente.get("mensaje", "No se pudo reabrir la incidencia."))
+
+    with a3:
         if st.button(
             "Aplicar corrección y volcar a contabilidad",
             key=f"aplicar_corr_{incidencia_id}"
@@ -6413,7 +6429,7 @@ def pantalla_incidencias_importacion():
             except Exception as e:
                 st.error(f"No se pudo aplicar la corrección: {e}")
 
-    with a3:
+    with a4:
         if st.button("Borrar incidencia", key=f"del_{incidencia_id}"):
             try:
                 resultado_borrado = borrar_incidencia_importacion(incidencia_id)

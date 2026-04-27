@@ -480,10 +480,10 @@ def inicializar_relaciones_fianzas():
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS relaciones_fianzas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             asiento_fianza_recibida_id INTEGER NOT NULL,
             asiento_fianza_devuelta_id INTEGER NOT NULL UNIQUE,
-            creado_en TEXT DEFAULT (datetime('now'))
+            creado_en TEXT DEFAULT CURRENT_TIMESTAMP
         )
     """)
 
@@ -526,7 +526,7 @@ def obtener_fianza_devuelta_existente(cursor, asiento_origen_id=None, concepto=N
             SELECT id
             FROM asientos
             WHERE tipo_operacion = 'fianza_devuelta'
-              AND concepto = ?
+              AND concepto = %s
             LIMIT 1
         """, (concepto,))
 
@@ -555,7 +555,7 @@ def obtener_fianza_recibida_existente(cursor, asiento_origen_id=None, concepto=N
             SELECT id
             FROM asientos
             WHERE tipo_operacion = 'fianza_recibida'
-              AND concepto LIKE ?
+              AND concepto LIKE %s
             LIMIT 1
         """, (f"Fianza asociada a asiento {asiento_origen_id} - %",))
 
@@ -568,7 +568,7 @@ def obtener_fianza_recibida_existente(cursor, asiento_origen_id=None, concepto=N
             SELECT id
             FROM asientos
             WHERE tipo_operacion = 'fianza_recibida'
-              AND concepto = ?
+              AND concepto = %s
             LIMIT 1
         """, (concepto,))
 
@@ -583,16 +583,16 @@ def obtener_importe_asiento_por_cuenta(cursor, asiento_id, cuenta_prefijo, movim
         cursor.execute("""
             SELECT COALESCE(SUM(importe), 0)
             FROM lineas_asiento
-            WHERE asiento_id = ?
-              AND cuenta LIKE ?
-              AND movimiento = ?
+            WHERE asiento_id = %s
+              AND cuenta LIKE %s
+              AND movimiento = %s
         """, (asiento_id, f"{cuenta_prefijo}%", movimiento))
     else:
         cursor.execute("""
             SELECT COALESCE(SUM(importe), 0)
             FROM lineas_asiento
-            WHERE asiento_id = ?
-              AND cuenta LIKE ?
+            WHERE asiento_id = %s
+              AND cuenta LIKE %s
         """, (asiento_id, f"{cuenta_prefijo}%"))
 
     fila = cursor.fetchone()
@@ -612,7 +612,7 @@ def obtener_saldo_fianza_recibida(cursor, asiento_fianza_id):
     cursor.execute("""
         SELECT asiento_fianza_devuelta_id
         FROM relaciones_fianzas
-        WHERE asiento_fianza_recibida_id = ?
+        WHERE asiento_fianza_recibida_id = %s
     """, (asiento_fianza_id,))
 
     devoluciones = cursor.fetchall()
@@ -727,18 +727,19 @@ def crear_asiento_fianza_recibida(fecha, concepto, importe, cuenta_tesoreria="57
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
         """, (
             fecha,
             concepto or "Fianza recibida",
             "fianza_recibida"
         ))
 
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (
             asiento_id,
             cuenta_tesoreria,
@@ -748,7 +749,7 @@ def crear_asiento_fianza_recibida(fecha, concepto, importe, cuenta_tesoreria="57
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (
             asiento_id,
             "560 Fianzas recibidas",
@@ -831,19 +832,20 @@ def crear_asiento_fianza_devuelta(
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
         """, (fecha, concepto, "fianza_devuelta"))
 
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (asiento_id, "560 Fianzas recibidas", "debe", float(importe)))
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (asiento_id, cuenta_tesoreria, "haber", float(importe)))
 
         cursor.execute("""
@@ -851,7 +853,7 @@ def crear_asiento_fianza_devuelta(
                 asiento_fianza_recibida_id,
                 asiento_fianza_devuelta_id
             )
-            VALUES (?, ?)
+            VALUES (%s, %s)
         """, (int(asiento_fianza_recibida_id), int(asiento_id)))
 
         conn.commit()
