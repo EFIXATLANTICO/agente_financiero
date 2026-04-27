@@ -43,7 +43,7 @@ def obtener_tercero(tipo, tercero_id):
             f"""
             SELECT id, nombre, nif, direccion, email, telefono
             FROM {tabla}
-            WHERE id = ?
+            WHERE id = %s
             """,
             (tercero_id,),
         )
@@ -77,7 +77,7 @@ def crear_tercero(tipo, nombre, nif="", direccion="", email="", telefono=""):
             f"""
             SELECT id
             FROM {tabla}
-            WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(?))
+            WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
             """,
             (nombre,),
         )
@@ -87,13 +87,15 @@ def crear_tercero(tipo, nombre, nif="", direccion="", email="", telefono=""):
         cursor.execute(
             f"""
             INSERT INTO {tabla} (nombre, nif, direccion, email, telefono)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (nombre, nif or "", direccion or "", email or "", telefono or ""),
         )
 
+        tercero_id = cursor.fetchone()[0]
         conn.commit()
-        return {"ok": True, "id": cursor.lastrowid, "mensaje": f"{tipo.capitalize()} creado correctamente"}
+        return {"ok": True, "id": tercero_id, "mensaje": f"{tipo.capitalize()} creado correctamente"}
 
     except Exception as e:
         conn.rollback()
@@ -117,7 +119,7 @@ def actualizar_tercero(tipo, tercero_id, nombre, nif="", direccion="", email="",
             f"""
             SELECT id
             FROM {tabla}
-            WHERE id = ?
+            WHERE id = %s
             """,
             (tercero_id,),
         )
@@ -128,8 +130,8 @@ def actualizar_tercero(tipo, tercero_id, nombre, nif="", direccion="", email="",
             f"""
             SELECT id
             FROM {tabla}
-            WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(?))
-              AND id <> ?
+            WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
+              AND id <> %s
             """,
             (nombre, tercero_id),
         )
@@ -139,8 +141,8 @@ def actualizar_tercero(tipo, tercero_id, nombre, nif="", direccion="", email="",
         cursor.execute(
             f"""
             UPDATE {tabla}
-            SET nombre = ?, nif = ?, direccion = ?, email = ?, telefono = ?
-            WHERE id = ?
+            SET nombre = %s, nif = %s, direccion = %s, email = %s, telefono = %s
+            WHERE id = %s
             """,
             (nombre, nif or "", direccion or "", email or "", telefono or "", tercero_id),
         )
@@ -166,7 +168,7 @@ def borrar_tercero(tipo, tercero_id):
             f"""
             SELECT nombre
             FROM {tabla}
-            WHERE id = ?
+            WHERE id = %s
             """,
             (tercero_id,),
         )
@@ -181,7 +183,7 @@ def borrar_tercero(tipo, tercero_id):
                 """
                 SELECT COUNT(*)
                 FROM facturas
-                WHERE tipo = 'venta' AND tercero_id = ?
+                WHERE tipo = 'venta' AND tercero_id = %s
                 """,
                 (tercero_id,),
             )
@@ -190,7 +192,7 @@ def borrar_tercero(tipo, tercero_id):
                 """
                 SELECT COUNT(*)
                 FROM facturas
-                WHERE tipo = 'compra' AND tercero_id = ?
+                WHERE tipo = 'compra' AND tercero_id = %s
                 """,
                 (tercero_id,),
             )
@@ -206,7 +208,7 @@ def borrar_tercero(tipo, tercero_id):
         cursor.execute(
             f"""
             DELETE FROM {tabla}
-            WHERE id = ?
+            WHERE id = %s
             """,
             (tercero_id,),
         )
@@ -248,10 +250,10 @@ def metricas_tercero(tipo, tercero_id):
             SELECT
                 COUNT(*),
                 COALESCE(SUM(total), 0),
-                COALESCE(SUM(CASE WHEN estado = ? THEN total ELSE 0 END), 0),
+                COALESCE(SUM(CASE WHEN estado = %s THEN total ELSE 0 END), 0),
                 COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'cobro_parcial', 'pago_parcial') THEN total ELSE 0 END), 0)
             FROM facturas
-            WHERE tipo = ? AND tercero_id = ?
+            WHERE tipo = %s AND tercero_id = %s
             """,
             (estado_final, tipo_factura, tercero_id),
         )
@@ -264,8 +266,8 @@ def metricas_tercero(tipo, tercero_id):
                 COUNT(*),
                 COALESCE(SUM(total), 0)
             FROM operaciones
-            WHERE tipo_operacion = ?
-              AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(?))
+            WHERE tipo_operacion = %s
+              AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(%s))
             """,
             (tipo_operacion, nombre_tercero),
         )
@@ -276,7 +278,7 @@ def metricas_tercero(tipo, tercero_id):
             """
             SELECT forma_pago, COUNT(*) as n
             FROM facturas
-            WHERE tipo = ? AND tercero_id = ? AND forma_pago IS NOT NULL AND TRIM(forma_pago) <> ''
+            WHERE tipo = %s AND tercero_id = %s AND forma_pago IS NOT NULL AND TRIM(forma_pago) <> ''
             GROUP BY forma_pago
             ORDER BY n DESC, forma_pago
             LIMIT 1
@@ -292,8 +294,8 @@ def metricas_tercero(tipo, tercero_id):
                 """
                 SELECT forma_pago, COUNT(*) as n
                 FROM operaciones
-                WHERE tipo_operacion = ?
-                  AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(?))
+                WHERE tipo_operacion = %s
+                  AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(%s))
                   AND forma_pago IS NOT NULL AND TRIM(forma_pago) <> ''
                 GROUP BY forma_pago
                 ORDER BY n DESC, forma_pago
@@ -309,7 +311,7 @@ def metricas_tercero(tipo, tercero_id):
             """
             SELECT id, fecha_emision, concepto, total, estado, forma_pago
             FROM facturas
-            WHERE tipo = ? AND tercero_id = ?
+            WHERE tipo = %s AND tercero_id = %s
             ORDER BY fecha_emision DESC, id DESC
             LIMIT 20
             """,
@@ -327,8 +329,8 @@ def metricas_tercero(tipo, tercero_id):
             """
             SELECT id, fecha_operacion, concepto, total, forma_pago
             FROM operaciones
-            WHERE tipo_operacion = ?
-              AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(?))
+            WHERE tipo_operacion = %s
+              AND UPPER(TRIM(nombre_tercero)) = UPPER(TRIM(%s))
             ORDER BY fecha_operacion DESC, id DESC
             LIMIT 20
             """,
