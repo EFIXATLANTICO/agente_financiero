@@ -41,6 +41,32 @@ def inicializar_tabla_inmovilizado():
     )
     """)
 
+    migraciones = [
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS porcentaje_amortizacion REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS amortizacion_acumulada REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS activo INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS observaciones TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS fecha_inicio_amortizacion TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS valor_residual REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS vida_util_anios REAL NOT NULL DEFAULT 1",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS cuenta_inmovilizado TEXT NOT NULL DEFAULT '213 Maquinaria'",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS cuenta_amort_acumulada TEXT NOT NULL DEFAULT '2813 Amortizacion acumulada maquinaria'",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS cuenta_gasto_amortizacion TEXT NOT NULL DEFAULT '681 Amortizacion del inmovilizado material'",
+        """
+        UPDATE inmovilizado
+        SET fecha_inicio_amortizacion = COALESCE(fecha_inicio_amortizacion, fecha_compra)
+        WHERE fecha_inicio_amortizacion IS NULL
+        """,
+        """
+        UPDATE inmovilizado
+        SET porcentaje_amortizacion = ROUND((100 / NULLIF(vida_util_anios, 0))::numeric, 2)
+        WHERE porcentaje_amortizacion = 0 AND vida_util_anios > 0
+        """,
+    ]
+
+    for sql in migraciones:
+        cursor.execute(sql)
+
     conexion.commit()
     conexion.close()
 
