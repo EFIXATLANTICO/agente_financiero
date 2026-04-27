@@ -4986,7 +4986,19 @@ def pantalla_importar_excel():
                             st.error(f"Faltan columnas obligatorias: {', '.join(faltantes)}")
                         elif isinstance(resultado, dict) and not resultado.get("ok", False):
                             st.error(resultado.get("detalle", str(resultado)))
-        else:
+                        elif isinstance(resultado, dict):
+                            importadas = int(resultado.get("importadas", 0))
+                            num_errores = int(resultado.get("num_errores", 0))
+                            st.success(f"Pagos a proveedores importados: {importadas}")
+                            if num_errores > 0:
+                                st.warning(f"Errores detectados: {num_errores}")
+                                st.dataframe(pd.DataFrame(resultado["errores"]), use_container_width=True)
+
+                with c2:
+                    if st.button("Cancelar importación pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
+                        st.session_state["confirmar_importacion_pagos_proveedor"] = False
+
+        elif tipo_excel == "__no_usar__pagos_proveedor_antiguo":
             importadas = int(resultado.get("importadas", 0))
             num_errores = int(resultado.get("num_errores", 0))
 

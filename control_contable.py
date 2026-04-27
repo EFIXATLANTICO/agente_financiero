@@ -149,12 +149,12 @@ def validar_sistema_completo():
                 a.fecha,
                 a.concepto,
                 a.tipo_operacion,
-                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe ELSE 0 END), 0)::numeric, 2) AS total_debe,
-                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe ELSE 0 END), 0)::numeric, 2) AS total_haber
+                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe::numeric ELSE 0 END), 0), 2) AS total_debe,
+                ROUND(COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe::numeric ELSE 0 END), 0), 2) AS total_haber
             FROM asientos a
             JOIN lineas_asiento l ON a.id = l.asiento_id
             GROUP BY a.id, a.fecha, a.concepto, a.tipo_operacion
-            HAVING ROUND((COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe ELSE 0 END), 0))::numeric, 2) != 0
+            HAVING ROUND((COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe::numeric ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe::numeric ELSE 0 END), 0)), 2) != 0
             ORDER BY a.id
         """)
         for asiento_id, fecha, concepto, tipo_operacion, total_debe, total_haber in cursor.fetchall():
@@ -200,8 +200,8 @@ def validar_sistema_completo():
             SELECT
                 SUBSTR(TRIM(cuenta), 1, 3) AS cuenta_base,
                 ROUND(SUM(CASE
-                    WHEN movimiento = 'debe' THEN importe
-                    WHEN movimiento = 'haber' THEN -importe
+                    WHEN movimiento = 'debe' THEN importe::numeric
+                    WHEN movimiento = 'haber' THEN -importe::numeric
                     ELSE 0
                 END)::numeric, 2) AS saldo
             FROM lineas_asiento
@@ -226,8 +226,8 @@ def validar_sistema_completo():
             SELECT
                 SUBSTR(TRIM(cuenta), 1, 3) AS cuenta_base,
                 ROUND(SUM(CASE
-                    WHEN movimiento = 'haber' THEN importe
-                    WHEN movimiento = 'debe' THEN -importe
+                    WHEN movimiento = 'haber' THEN importe::numeric
+                    WHEN movimiento = 'debe' THEN -importe::numeric
                     ELSE 0
                 END)::numeric, 2) AS saldo
             FROM lineas_asiento
@@ -250,8 +250,8 @@ def validar_sistema_completo():
         # =====================================================
         cursor.execute("""
             SELECT ROUND(SUM(CASE
-                WHEN movimiento = 'debe' THEN importe
-                WHEN movimiento = 'haber' THEN -importe
+                WHEN movimiento = 'debe' THEN importe::numeric
+                WHEN movimiento = 'haber' THEN -importe::numeric
                 ELSE 0
             END)::numeric, 2)
             FROM lineas_asiento
@@ -273,8 +273,8 @@ def validar_sistema_completo():
         # =====================================================
         cursor.execute("""
             SELECT ROUND(SUM(CASE
-                WHEN movimiento = 'debe' THEN importe
-                WHEN movimiento = 'haber' THEN -importe
+                WHEN movimiento = 'debe' THEN importe::numeric
+                WHEN movimiento = 'haber' THEN -importe::numeric
                 ELSE 0
             END)::numeric, 2)
             FROM lineas_asiento
