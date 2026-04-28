@@ -8,20 +8,68 @@ def ensure_dirs():
     pass
 
 
+def _secret_text(key, default=None):
+    if key in st.secrets:
+        return str(st.secrets[key]).strip()
+    return default
+
+
+def _secret_int(key, default):
+    try:
+        return int(str(st.secrets.get(key, default)).strip())
+    except Exception:
+        return default
+
+
+def _supabase_project_ref_from_user():
+    user = _secret_text("SUPABASE_USER", "")
+    if "." in user:
+        return user.split(".", 1)[1].strip()
+    return ""
+
+
+def _add_destino(destinos, host, port, user):
+    host = str(host or "").strip()
+    port = int(port or 5432)
+    user = str(user or "").strip()
+
+    if not host or not user:
+        return
+
+    clave = (host, port, user)
+    if clave not in {(d["host"], d["port"], d["user"]) for d in destinos}:
+        destinos.append({"host": host, "port": port, "user": user})
+
+
 def get_master_connection():
     ultimo_error = None
-    destinos = [
-        {
-            "host": st.secrets["SUPABASE_HOST"],
-            "port": st.secrets["SUPABASE_PORT"],
-        }
-    ]
+    destinos = []
+
+    host_pooler = _secret_text("SUPABASE_HOST")
+    port_pooler = _secret_int("SUPABASE_PORT", 6543)
+    user_pooler = _secret_text("SUPABASE_USER")
+
+    _add_destino(destinos, host_pooler, port_pooler, user_pooler)
+
+    if port_pooler == 6543:
+        _add_destino(destinos, host_pooler, 5432, user_pooler)
 
     if "SUPABASE_DIRECT_HOST" in st.secrets:
-        destinos.append({
-            "host": st.secrets["SUPABASE_DIRECT_HOST"],
-            "port": st.secrets.get("SUPABASE_DIRECT_PORT", 5432),
-        })
+        _add_destino(
+            destinos,
+            _secret_text("SUPABASE_DIRECT_HOST"),
+            _secret_int("SUPABASE_DIRECT_PORT", 5432),
+            _secret_text("SUPABASE_DIRECT_USER", "postgres"),
+        )
+    else:
+        project_ref = _supabase_project_ref_from_user()
+        if project_ref:
+            _add_destino(
+                destinos,
+                f"db.{project_ref}.supabase.co",
+                5432,
+                _secret_text("SUPABASE_DIRECT_USER", "postgres"),
+            )
 
     for destino in destinos:
         try:
@@ -29,7 +77,7 @@ def get_master_connection():
                 host=destino["host"],
                 port=destino["port"],
                 database=st.secrets["SUPABASE_DB"],
-                user=st.secrets["SUPABASE_USER"],
+                user=destino["user"],
                 password=st.secrets["SUPABASE_PASSWORD"],
                 sslmode="require",
                 connect_timeout=4,
