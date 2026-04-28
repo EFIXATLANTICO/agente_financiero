@@ -4854,9 +4854,9 @@ def pantalla_importar_excel():
                         else:
                             st.success(
                                 f"Facturas importadas: {resultado.get('importadas', 0)}. "
+                                f"Duplicadas omitidas: {resultado.get('duplicadas', 0)}. "
                                 f"Los asientos creados quedan registrados con tipo 'factura_importada_excel'."
                             )
-                            st.rerun()
 
                 with c2:
                     if st.button("Cancelar importación facturas"):
@@ -4864,7 +4864,16 @@ def pantalla_importar_excel():
 
             resultado_facturas = st.session_state.get("ultimo_resultado_importacion_facturas")
 
+            if isinstance(resultado_facturas, dict) and resultado_facturas.get("estado") == "duplicado":
+                st.warning("Este archivo ya fue importado anteriormente. No se ha creado nada nuevo.")
+
             if isinstance(resultado_facturas, dict) and resultado_facturas.get("ok", False):
+                st.success(
+                    f"Importacion finalizada correctamente. "
+                    f"Facturas nuevas: {resultado_facturas.get('importadas', 0)}. "
+                    f"Duplicadas omitidas: {resultado_facturas.get('duplicadas', 0)}."
+                )
+
                 if resultado_facturas.get("num_errores", 0) > 0:
                     st.warning(f"Errores detectados: {resultado_facturas['num_errores']}")
 

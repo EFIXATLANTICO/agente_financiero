@@ -621,6 +621,43 @@ def registrar_importacion(tipo, nombre_archivo, hash_archivo):
     return importacion_id, "ok"
 
 
+def _existe_factura_importada(cursor, empresa_id, tipo, numero_factura, nombre_tercero, fecha_emision, total):
+    numero_factura = str(numero_factura or "").strip()
+    nombre_tercero = str(nombre_tercero or "").strip()
+    fecha_emision = str(fecha_emision or "").strip()
+    total = round(float(total or 0), 2)
+
+    if numero_factura:
+        cursor.execute(
+            """
+            SELECT id
+            FROM facturas
+            WHERE empresa_id = %s
+              AND tipo = %s
+              AND COALESCE(numero_factura, '') = %s
+              AND UPPER(TRIM(COALESCE(nombre_tercero, ''))) = UPPER(TRIM(%s))
+            LIMIT 1
+            """,
+            (empresa_id, tipo, numero_factura, nombre_tercero),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT id
+            FROM facturas
+            WHERE empresa_id = %s
+              AND tipo = %s
+              AND UPPER(TRIM(COALESCE(nombre_tercero, ''))) = UPPER(TRIM(%s))
+              AND COALESCE(fecha_emision::text, '') = %s
+              AND ROUND(COALESCE(total, 0)::numeric, 2) = ROUND(%s::numeric, 2)
+            LIMIT 1
+            """,
+            (empresa_id, tipo, nombre_tercero, fecha_emision, total),
+        )
+
+    return cursor.fetchone() is not None
+
+
 # =========================
 # CLASIFICACIÓN DE MOVIMIENTOS
 # =========================
@@ -1029,6 +1066,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
     cursor = conn.cursor()
 
     importadas = 0
+    duplicadas = 0
     errores = []
 
     def registrar_error(fila_excel, fecha, concepto, mensaje, datos=None):
@@ -1295,6 +1333,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
     _asegurar_columnas_importacion_facturas(cursor)
 
     importadas = 0
+    duplicadas = 0
     errores = []
 
     def registrar_error(fila_excel, fecha, concepto, mensaje, datos=None):
@@ -1397,6 +1436,19 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 es_abono = importe < 0
                 tipo_factura = "abono_compra" if es_abono else "compra"
                 cuenta_gasto = _cuenta_compra_por_proveedor(razon, referencia, forma_pago)
+
+                if _existe_factura_importada(
+                    cursor,
+                    empresa_id=empresa_id,
+                    tipo=tipo_factura,
+                    numero_factura=numero_factura,
+                    nombre_tercero=razon,
+                    fecha_emision=fecha_emision_txt,
+                    total=total_factura,
+                ):
+                    duplicadas += 1
+                    cursor.execute("RELEASE SAVEPOINT fila_importacion")
+                    continue
 
                 cursor.execute(
                     """
@@ -1526,6 +1578,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
             "ok": True,
             "estado": "ok",
             "importadas": importadas,
+            "duplicadas": duplicadas,
             "errores": errores,
             "num_errores": len(errores),
         }
@@ -1670,6 +1723,7 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
     _asegurar_columnas_importacion_facturas(cursor)
 
     importadas = 0
+    duplicadas = 0
     errores = []
 
     def registrar_error(fila_excel, fecha, concepto, mensaje, datos=None):
@@ -1711,6 +1765,7 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
 
                 es_abono = total < 0
                 total_abs = abs(total)
+                tipo_factura = "abono_venta" if es_abono else "venta"
                 base = round(total_abs / (1 + igic_pct / 100), 2)
                 cuota = round(total_abs - base, 2)
                 fecha_txt = fecha.strftime("%Y-%m-%d")
@@ -1718,6 +1773,18 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
                 dias_vto = _parsear_dias_vencimiento(row.get("vencimientos"))
                 fecha_vto = fecha + pd.Timedelta(days=dias_vto) if dias_vto > 0 else None
                 concepto = _texto_limpio(row.get("observaciones"), f"Factura {numero_factura} - {tercero}")
+
+                if _existe_factura_importada(
+                    cursor,
+                    empresa_id=empresa_id,
+                    tipo=tipo_factura,
+                    numero_factura=numero_factura,
+                    nombre_tercero=tercero,
+                    fecha_emision=fecha_txt,
+                    total=total_abs,
+                ):
+                    duplicadas += 1
+                    continue
 
                 cursor.execute(
                     """
@@ -1751,7 +1818,6 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
 
                 estado_factura = "abono" if es_abono else "pendiente" if dias_vto > 0 else "pagada"
                 fecha_vto_txt = fecha_vto.strftime("%Y-%m-%d") if fecha_vto is not None else None
-                tipo_factura = "abono_venta" if es_abono else "venta"
 
                 cursor.execute(
                     """
@@ -1892,6 +1958,7 @@ def importar_facturas_seralven(df, nombre_archivo, archivo_bytes, opciones):
             "ok": True,
             "estado": "ok",
             "importadas": importadas,
+            "duplicadas": duplicadas,
             "errores": errores,
             "num_errores": len(errores),
         }
@@ -1961,6 +2028,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
     cursor = conn.cursor()
 
     importadas = 0
+    duplicadas = 0
     errores = []
 
     tipo_tercero = opciones.get("tipo_tercero", "cliente")
@@ -2031,6 +2099,19 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                     cuota = round(total - base, 2)
 
                 fecha_txt = fecha.strftime("%Y-%m-%d")
+                tipo_factura = "venta" if tipo_tercero == "cliente" else "compra"
+
+                if _existe_factura_importada(
+                    cursor,
+                    empresa_id=empresa_id,
+                    tipo=tipo_factura,
+                    numero_factura=numero_factura,
+                    nombre_tercero=tercero,
+                    fecha_emision=fecha_txt,
+                    total=total,
+                ):
+                    duplicadas += 1
+                    continue
 
                 if crear_terceros:
                     tercero_id = buscar_o_crear_tercero_importacion(tipo_tercero, tercero)
@@ -2137,7 +2218,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                         cursor.execute(
                             """
                             INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                            VALUES (?, ?)
+                            VALUES (%s, %s)
                             """,
                             (importacion_id, asiento_id),
                         )
@@ -2213,6 +2294,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
             "ok": True,
             "estado": "ok",
             "importadas": importadas,
+            "duplicadas": duplicadas,
             "errores": errores,
             "num_errores": len(errores),
         }
