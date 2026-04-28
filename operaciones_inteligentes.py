@@ -239,7 +239,15 @@ def buscar_o_crear_tercero(nombre, tipo):
 
     try:
         if tipo == "compra":
-            cursor.execute("SELECT id FROM proveedores WHERE nombre = ?", (nombre,))
+            cursor.execute(
+                """
+                SELECT id
+                FROM proveedores
+                WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
+                LIMIT 1
+                """,
+                (nombre,),
+            )
             fila = cursor.fetchone()
             if fila:
                 return fila[0], "proveedor"
@@ -247,15 +255,25 @@ def buscar_o_crear_tercero(nombre, tipo):
             cursor.execute(
                 """
                 INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
                 """,
                 (nombre, "", "", "", ""),
             )
+            tercero_id = cursor.fetchone()[0]
             conn.commit()
-            return cursor.lastrowid, "proveedor"
+            return tercero_id, "proveedor"
 
         if tipo == "venta":
-            cursor.execute("SELECT id FROM clientes WHERE nombre = ?", (nombre,))
+            cursor.execute(
+                """
+                SELECT id
+                FROM clientes
+                WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
+                LIMIT 1
+                """,
+                (nombre,),
+            )
             fila = cursor.fetchone()
             if fila:
                 return fila[0], "cliente"
@@ -263,12 +281,14 @@ def buscar_o_crear_tercero(nombre, tipo):
             cursor.execute(
                 """
                 INSERT INTO clientes (nombre, nif, direccion, email, telefono)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
                 """,
                 (nombre, "", "", "", ""),
             )
+            tercero_id = cursor.fetchone()[0]
             conn.commit()
-            return cursor.lastrowid, "cliente"
+            return tercero_id, "cliente"
 
         return None, None
     finally:
@@ -333,7 +353,7 @@ def registrar_validacion_contable(fecha, origen, estado, mensaje, detalle=""):
             INSERT INTO validaciones_contables (
                 empresa_id, fecha, origen, referencia_id, estado, mensaje, detalle, bloqueante
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 None,
@@ -434,7 +454,8 @@ def registrar_operacion_bd(datos, cursor=None):
             cuota_impuesto,
             total
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
         """,
         (
             int(datos.get("empresa_id", 1)),
@@ -451,7 +472,7 @@ def registrar_operacion_bd(datos, cursor=None):
         ),
     )
 
-    operacion_id = cursor.lastrowid
+    operacion_id = cursor.fetchone()[0]
 
     if cierre_local:
         conn.commit()
@@ -492,11 +513,12 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
             """,
             (fecha, concepto, tipo_operacion_asiento),
         )
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         for cuenta, movimiento, importe in lineas:
             movimiento = (movimiento or "").strip().lower()
@@ -507,7 +529,7 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
             cursor.execute(
                 """
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
                 """,
                 (asiento_id, cuenta, movimiento, float(importe)),
             )
@@ -516,10 +538,10 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
 
         cursor.execute(
             """
-            INSERT INTO operaciones_asientos (operacion_id, asiento_id, empresa_id)
-            VALUES (?, ?, ?)
+            INSERT INTO operaciones_asientos (operacion_id, asiento_id)
+            VALUES (%s, %s)
             """,
-            (operacion_id, asiento_id, int(datos_operacion.get("empresa_id", 1))),
+            (operacion_id, asiento_id),
            )
 
         conn.commit()
@@ -596,7 +618,7 @@ def registrar_vencimiento_operacion(
                 tipo,
                 nombre_tercero
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 empresa_id,
@@ -701,10 +723,10 @@ def existe_operacion_parecida_reciente(fecha, concepto, total, tipo_operacion):
             """
             SELECT id
             FROM operaciones
-            WHERE fecha_operacion = ?
-              AND concepto = ?
-              AND total = ?
-              AND tipo_operacion = ?
+            WHERE fecha_operacion = %s
+              AND concepto = %s
+              AND ROUND(COALESCE(total, 0)::numeric, 2) = ROUND(%s::numeric, 2)
+              AND tipo_operacion = %s
             ORDER BY id DESC
             LIMIT 1
             """,
@@ -961,7 +983,6 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             reparto_pago["importe_contado"] = importe_contado
             reparto_pago["importe_credito"] = importe_credito
 
-    print("DEBUG REPARTO PAGO:", reparto_pago)
     tercero_id, tipo_tercero = buscar_o_crear_tercero(tercero, tipo)
     if tipo == "financiacion":
         if definicion:

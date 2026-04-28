@@ -15,11 +15,12 @@ def crear_asiento(fecha, concepto, tipo_operacion):
 
     cursor.execute("""
     INSERT INTO asientos (fecha, concepto, tipo_operacion)
-    VALUES (?, ?, ?)
+    VALUES (%s, %s, %s)
+    RETURNING id
     """, (fecha, concepto, tipo_operacion))
 
+    asiento_id = cursor.fetchone()[0]
     conn.commit()
-    asiento_id = cursor.lastrowid
     conn.close()
 
     return asiento_id
@@ -38,7 +39,7 @@ def agregar_linea_asiento(asiento_id, cuenta, movimiento, importe):
 
     cursor.execute("""
     INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-    VALUES (?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s)
     """, (asiento_id, cuenta, movimiento, float(importe)))
 
     conn.commit()
@@ -55,7 +56,7 @@ def obtener_lineas_asiento(asiento_id):
     cursor.execute("""
     SELECT cuenta, movimiento, importe
     FROM lineas_asiento
-    WHERE asiento_id = ?
+    WHERE asiento_id = %s
     ORDER BY id
     """, (asiento_id,))
 
@@ -77,7 +78,7 @@ def obtener_libro_diario(tipo_operacion=None, limite=None):
         cursor.execute("""
         SELECT id, fecha, concepto, tipo_operacion
         FROM asientos
-        WHERE tipo_operacion = ?
+        WHERE tipo_operacion = %s
         ORDER BY id ASC
         """, (tipo_operacion,))
     else:
@@ -98,7 +99,7 @@ def obtener_libro_diario(tipo_operacion=None, limite=None):
         cursor.execute("""
         SELECT cuenta, movimiento, importe
         FROM lineas_asiento
-        WHERE asiento_id = ?
+        WHERE asiento_id = %s
         ORDER BY id
         """, (asiento_id,))
         lineas = cursor.fetchall()
@@ -155,10 +156,11 @@ def crear_asiento_completo(fecha, concepto, tipo_operacion, lineas):
     try:
         cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (?, ?, ?)
+        VALUES (%s, %s, %s)
+        RETURNING id
         """, (fecha, concepto, tipo_operacion))
 
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         for cuenta, movimiento, importe in lineas:
             movimiento = (movimiento or "").strip().lower()
@@ -168,7 +170,7 @@ def crear_asiento_completo(fecha, concepto, tipo_operacion, lineas):
 
             cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
             """, (asiento_id, cuenta, movimiento, float(importe)))
 
         conn.commit()
@@ -261,7 +263,7 @@ def obtener_mayor(cuenta):
     SELECT a.fecha, a.concepto, l.movimiento, l.importe
     FROM lineas_asiento l
     JOIN asientos a ON l.asiento_id = a.id
-    WHERE l.cuenta = ?
+    WHERE l.cuenta = %s
     ORDER BY a.fecha, l.id
     """, (cuenta,))
 
@@ -442,25 +444,26 @@ def aplicar_correccion_incidencia(incidencia_id, propuesta):
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
+            RETURNING id
         """, (fecha, concepto, "correccion_incidencia"))
 
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (asiento_id, cuenta_debe, "debe", round(debe, 2)))
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (%s, %s, %s, %s)
         """, (asiento_id, cuenta_haber, "haber", round(haber, 2)))
 
         cursor.execute("""
             UPDATE incidencias_importacion
             SET estado = 'revisada'
-            WHERE id = ?
+            WHERE id = %s
         """, (incidencia_id,))
 
         conn.commit()
