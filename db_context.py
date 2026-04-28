@@ -1,6 +1,5 @@
 import os
 import sqlite3
-import time
 import psycopg2
 import streamlit as st
 
@@ -25,26 +24,23 @@ def get_master_connection():
         })
 
     for destino in destinos:
-        for intento in range(2):
-            try:
-                return psycopg2.connect(
-                    host=destino["host"],
-                    port=destino["port"],
-                    database=st.secrets["SUPABASE_DB"],
-                    user=st.secrets["SUPABASE_USER"],
-                    password=st.secrets["SUPABASE_PASSWORD"],
-                    sslmode="require",
-                    connect_timeout=6,
-                    keepalives=1,
-                    keepalives_idle=30,
-                    keepalives_interval=10,
-                    keepalives_count=3,
-                    application_name="efix_atlantico",
-                )
-            except psycopg2.OperationalError as e:
-                ultimo_error = e
-                if intento < 1:
-                    time.sleep(1.0)
+        try:
+            return psycopg2.connect(
+                host=destino["host"],
+                port=destino["port"],
+                database=st.secrets["SUPABASE_DB"],
+                user=st.secrets["SUPABASE_USER"],
+                password=st.secrets["SUPABASE_PASSWORD"],
+                sslmode="require",
+                connect_timeout=4,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3,
+                application_name="efix_atlantico",
+            )
+        except psycopg2.OperationalError as e:
+            ultimo_error = e
 
     raise ultimo_error
 

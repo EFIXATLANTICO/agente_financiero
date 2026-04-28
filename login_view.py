@@ -422,12 +422,22 @@ def pantalla_login():
         unsafe_allow_html=True
     )
 
+    if st.session_state.get("login_error"):
+        st.error(st.session_state["login_error"])
+        detalle_error = st.session_state.get("login_error_detalle")
+        if detalle_error:
+            with st.expander("Detalle tecnico de conexion"):
+                st.code(detalle_error)
+
     with st.form("form_login_efix", clear_on_submit=False):
         usuario = st.text_input("Usuario", autocomplete="username")
         password = st.text_input("Contraseña", type="password", autocomplete="current-password")
         enviar_login = st.form_submit_button("Entrar")
 
     if enviar_login:
+        st.session_state.pop("login_error", None)
+        st.session_state.pop("login_error_detalle", None)
+
         usuario_limpio = (usuario or "").strip()
         password_limpio = (password or "").strip()
 
@@ -440,10 +450,17 @@ def pantalla_login():
             try:
                 usuario_login = usuario_limpio.lower()
                 user = autenticar(usuario_login, password_limpio)
-            except psycopg2.OperationalError:
-                st.error("La base de datos no responde ahora mismo. Espera unos segundos y vuelve a pulsar Entrar.")
-                st.markdown('</div>', unsafe_allow_html=True)
-                return
+            except psycopg2.OperationalError as e:
+                st.session_state["login_error"] = (
+                    "La base de datos no responde ahora mismo. "
+                    "Espera unos segundos y vuelve a pulsar Entrar."
+                )
+                st.session_state["login_error_detalle"] = str(e)
+                st.rerun()
+            except Exception as e:
+                st.session_state["login_error"] = "No se pudo verificar el acceso. Revisa la conexion o los secretos de Supabase."
+                st.session_state["login_error_detalle"] = str(e)
+                st.rerun()
 
         if not user:
             st.error("Usuario o contraseña incorrectos")
