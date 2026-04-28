@@ -438,9 +438,8 @@ def pantalla_login():
 
         with st.spinner("Verificando acceso..."):
             try:
-                user = autenticar(usuario_limpio, password_limpio)
-                if not user and usuario_limpio.lower() != usuario_limpio:
-                    user = autenticar(usuario_limpio.lower(), password_limpio)
+                usuario_login = usuario_limpio.lower()
+                user = autenticar(usuario_login, password_limpio)
             except psycopg2.OperationalError:
                 st.error("La base de datos no responde ahora mismo. Espera unos segundos y vuelve a pulsar Entrar.")
                 st.markdown('</div>', unsafe_allow_html=True)

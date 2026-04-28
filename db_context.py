@@ -11,27 +11,40 @@ def ensure_dirs():
 
 def get_master_connection():
     ultimo_error = None
+    destinos = [
+        {
+            "host": st.secrets["SUPABASE_HOST"],
+            "port": st.secrets["SUPABASE_PORT"],
+        }
+    ]
 
-    for intento in range(3):
-        try:
-            return psycopg2.connect(
-                host=st.secrets["SUPABASE_HOST"],
-                port=st.secrets["SUPABASE_PORT"],
-                database=st.secrets["SUPABASE_DB"],
-                user=st.secrets["SUPABASE_USER"],
-                password=st.secrets["SUPABASE_PASSWORD"],
-                sslmode="require",
-                connect_timeout=8,
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=10,
-                keepalives_count=3,
-                application_name="efix_atlantico",
-            )
-        except psycopg2.OperationalError as e:
-            ultimo_error = e
-            if intento < 2:
-                time.sleep(1.5 * (intento + 1))
+    if "SUPABASE_DIRECT_HOST" in st.secrets:
+        destinos.append({
+            "host": st.secrets["SUPABASE_DIRECT_HOST"],
+            "port": st.secrets.get("SUPABASE_DIRECT_PORT", 5432),
+        })
+
+    for destino in destinos:
+        for intento in range(2):
+            try:
+                return psycopg2.connect(
+                    host=destino["host"],
+                    port=destino["port"],
+                    database=st.secrets["SUPABASE_DB"],
+                    user=st.secrets["SUPABASE_USER"],
+                    password=st.secrets["SUPABASE_PASSWORD"],
+                    sslmode="require",
+                    connect_timeout=6,
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=3,
+                    application_name="efix_atlantico",
+                )
+            except psycopg2.OperationalError as e:
+                ultimo_error = e
+                if intento < 1:
+                    time.sleep(1.0)
 
     raise ultimo_error
 
