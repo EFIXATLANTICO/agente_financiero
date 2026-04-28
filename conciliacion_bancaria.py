@@ -73,7 +73,7 @@ def registrar_movimiento_banco(fecha, concepto, importe, saldo=None, referencia=
         saldo,
         referencia
     )
-    VALUES (?, ?, ?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s, %s, %s)
     """, (
         fecha,
         concepto,

@@ -46,6 +46,12 @@ def inicializar_tabla_inmovilizado():
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS amortizacion_acumulada REAL NOT NULL DEFAULT 0",
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS activo INTEGER NOT NULL DEFAULT 1",
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS observaciones TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS codigo_maquina TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS categoria TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS ubicacion TEXT",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS estado_operativo TEXT NOT NULL DEFAULT 'disponible'",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS valor_mercado REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS tarifa_dia REAL NOT NULL DEFAULT 0",
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS fecha_inicio_amortizacion TEXT",
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS valor_residual REAL NOT NULL DEFAULT 0",
         "ALTER TABLE inmovilizado ADD COLUMN IF NOT EXISTS vida_util_anios REAL NOT NULL DEFAULT 1",
@@ -66,6 +72,35 @@ def inicializar_tabla_inmovilizado():
 
     for sql in migraciones:
         cursor.execute(sql)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS alquileres_maquinaria (
+        id SERIAL PRIMARY KEY,
+        bien_id INTEGER NOT NULL REFERENCES inmovilizado(id),
+        cliente TEXT,
+        obra TEXT,
+        fecha_inicio TEXT NOT NULL,
+        fecha_fin TEXT,
+        dias INTEGER NOT NULL DEFAULT 0,
+        importe REAL NOT NULL DEFAULT 0,
+        estado TEXT NOT NULL DEFAULT 'abierto',
+        observaciones TEXT,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS costes_maquinaria (
+        id SERIAL PRIMARY KEY,
+        bien_id INTEGER NOT NULL REFERENCES inmovilizado(id),
+        fecha TEXT NOT NULL,
+        tipo TEXT NOT NULL,
+        importe REAL NOT NULL DEFAULT 0,
+        proveedor TEXT,
+        observaciones TEXT,
+        creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
 
     conexion.commit()
     conexion.close()
@@ -203,6 +238,12 @@ def ver_inmovilizado(solo_activos=False):
         vida_util_anios,
         porcentaje_amortizacion,
         amortizacion_acumulada,
+        codigo_maquina,
+        categoria,
+        ubicacion,
+        estado_operativo,
+        valor_mercado,
+        tarifa_dia,
         ROUND(((coste - valor_residual) - amortizacion_acumulada)::numeric, 2) AS pendiente_amortizar,
         ROUND((coste - amortizacion_acumulada)::numeric, 2) AS valor_neto_contable,
         cuenta_inmovilizado,
@@ -502,3 +543,189 @@ def cuadro_amortizacion(bien_id):
             break
 
     return pd.DataFrame(filas)
+
+
+def actualizar_datos_maquinaria(
+    bien_id,
+    codigo_maquina="",
+    categoria="",
+    ubicacion="",
+    estado_operativo="disponible",
+    valor_mercado=0,
+    tarifa_dia=0,
+    observaciones=None,
+):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if observaciones is None:
+        cursor.execute("""
+            UPDATE inmovilizado
+            SET codigo_maquina = %s,
+                categoria = %s,
+                ubicacion = %s,
+                estado_operativo = %s,
+                valor_mercado = %s,
+                tarifa_dia = %s
+            WHERE id = %s
+        """, (
+            codigo_maquina, categoria, ubicacion, estado_operativo,
+            float(valor_mercado or 0), float(tarifa_dia or 0), bien_id
+        ))
+    else:
+        cursor.execute("""
+            UPDATE inmovilizado
+            SET codigo_maquina = %s,
+                categoria = %s,
+                ubicacion = %s,
+                estado_operativo = %s,
+                valor_mercado = %s,
+                tarifa_dia = %s,
+                observaciones = %s
+            WHERE id = %s
+        """, (
+            codigo_maquina, categoria, ubicacion, estado_operativo,
+            float(valor_mercado or 0), float(tarifa_dia or 0), observaciones, bien_id
+        ))
+
+    conn.commit()
+    afectados = cursor.rowcount
+    conn.close()
+    return afectados > 0
+
+
+def registrar_alquiler_maquinaria(
+    bien_id,
+    cliente,
+    obra,
+    fecha_inicio,
+    fecha_fin=None,
+    dias=0,
+    importe=0,
+    estado="abierto",
+    observaciones="",
+):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO alquileres_maquinaria (
+            bien_id, cliente, obra, fecha_inicio, fecha_fin, dias, importe, estado, observaciones
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+    """, (
+        bien_id, cliente, obra, fecha_inicio, fecha_fin, int(dias or 0),
+        float(importe or 0), estado, observaciones
+    ))
+    alquiler_id = cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return alquiler_id
+
+
+def registrar_coste_maquinaria(bien_id, fecha, tipo, importe, proveedor="", observaciones=""):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO costes_maquinaria (bien_id, fecha, tipo, importe, proveedor, observaciones)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        RETURNING id
+    """, (bien_id, fecha, tipo, float(importe or 0), proveedor, observaciones))
+    coste_id = cursor.fetchone()[0]
+    conn.commit()
+    conn.close()
+    return coste_id
+
+
+def listar_rotacion_maquinaria(fecha_desde=None, fecha_hasta=None):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+
+    params = []
+    filtro_alquiler = ""
+    filtro_coste = ""
+    if fecha_desde:
+        filtro_alquiler += " AND a.fecha_inicio >= %s"
+        filtro_coste += " AND c.fecha >= %s"
+        params.append(fecha_desde)
+    if fecha_hasta:
+        filtro_alquiler += " AND COALESCE(a.fecha_fin, a.fecha_inicio) <= %s"
+        filtro_coste += " AND c.fecha <= %s"
+        params.append(fecha_hasta)
+
+    params_costes = list(params)
+    df = pd.read_sql_query(f"""
+        WITH alquileres AS (
+            SELECT
+                a.bien_id,
+                COUNT(*) AS alquileres,
+                COALESCE(SUM(a.dias), 0) AS dias_alquilados,
+                COALESCE(SUM(a.importe), 0) AS ingresos
+            FROM alquileres_maquinaria a
+            WHERE 1=1 {filtro_alquiler}
+            GROUP BY a.bien_id
+        ),
+        costes AS (
+            SELECT
+                c.bien_id,
+                COALESCE(SUM(c.importe), 0) AS costes
+            FROM costes_maquinaria c
+            WHERE 1=1 {filtro_coste}
+            GROUP BY c.bien_id
+        )
+        SELECT
+            i.id,
+            i.nombre,
+            i.codigo_maquina,
+            i.categoria,
+            i.ubicacion,
+            i.estado_operativo,
+            i.coste,
+            i.valor_mercado,
+            i.tarifa_dia,
+            COALESCE(a.alquileres, 0) AS alquileres,
+            COALESCE(a.dias_alquilados, 0) AS dias_alquilados,
+            COALESCE(a.ingresos, 0) AS ingresos,
+            COALESCE(c.costes, 0) AS costes,
+            ROUND((COALESCE(a.ingresos, 0) - COALESCE(c.costes, 0))::numeric, 2) AS margen
+        FROM inmovilizado i
+        LEFT JOIN alquileres a ON a.bien_id = i.id
+        LEFT JOIN costes c ON c.bien_id = i.id
+        WHERE i.activo = 1
+        ORDER BY ingresos DESC, i.nombre
+    """, conn, params=params + params_costes)
+
+    conn.close()
+    return df
+
+
+def listar_alquileres_maquinaria(limit=500):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+    df = pd.read_sql_query("""
+        SELECT a.id, i.nombre AS maquina, a.cliente, a.obra, a.fecha_inicio, a.fecha_fin,
+               a.dias, a.importe, a.estado, a.observaciones
+        FROM alquileres_maquinaria a
+        LEFT JOIN inmovilizado i ON i.id = a.bien_id
+        ORDER BY a.fecha_inicio DESC, a.id DESC
+        LIMIT %s
+    """, conn, params=(int(limit),))
+    conn.close()
+    return df
+
+
+def listar_costes_maquinaria(limit=500):
+    inicializar_tabla_inmovilizado()
+    conn = get_connection()
+    df = pd.read_sql_query("""
+        SELECT c.id, i.nombre AS maquina, c.fecha, c.tipo, c.importe, c.proveedor, c.observaciones
+        FROM costes_maquinaria c
+        LEFT JOIN inmovilizado i ON i.id = c.bien_id
+        ORDER BY c.fecha DESC, c.id DESC
+        LIMIT %s
+    """, conn, params=(int(limit),))
+    conn.close()
+    return df

@@ -1,4 +1,4 @@
-import os
+﻿import os
 import random
 import glob
 import datetime
@@ -47,7 +47,7 @@ try:
     from importador_excel import importar_movimientos_desde_excel
 except ImportError:
     def importar_movimientos_desde_excel(*args, **kwargs):
-        return "error: la función importar_movimientos_desde_excel no está disponible en el archivo cargado"
+        return "error: la funciÃ³n importar_movimientos_desde_excel no estÃ¡ disponible en el archivo cargado"
 
 from control_contable import validar_sistema_completo
 from contabilidad import borrar_asiento, reset_contabilidad
@@ -65,7 +65,38 @@ from inmovilizado import (
     alta_inmovilizado,
     ver_inmovilizado,
     generar_amortizaciones_mes,
-    historial_amortizaciones
+    historial_amortizaciones,
+    actualizar_datos_maquinaria,
+    registrar_alquiler_maquinaria,
+    registrar_coste_maquinaria,
+    listar_rotacion_maquinaria,
+    listar_alquileres_maquinaria,
+    listar_costes_maquinaria
+)
+
+from bancos_seguros import (
+    inicializar_bancos_seguros,
+    listar_entidades,
+    crear_entidad,
+    opciones_entidades,
+    registrar_saldo,
+    listar_saldos,
+    registrar_producto_financiero,
+    listar_productos_financieros,
+    registrar_seguro,
+    listar_seguros,
+    listar_movimientos_bancarios
+)
+
+from laboral import (
+    inicializar_laboral,
+    listar_trabajadores,
+    crear_trabajador,
+    opciones_trabajadores,
+    registrar_nomina,
+    listar_nominas,
+    registrar_impuesto_laboral,
+    listar_impuestos_laborales
 )
 
 from conciliacion_bancaria import (
@@ -110,7 +141,7 @@ from facturacion import (
 )
 
 # =========================================================
-# ESTILO / DISEÑO
+# ESTILO / DISEÃ‘O
 # =========================================================
 
 def obtener_imagen_canarias_local():
@@ -583,8 +614,8 @@ def mostrar_hero():
                 'max-width:760px;'
                 'margin-bottom:1.35rem;'
                 '">'
-                    'Gestiona importaciones, incidencias, fianzas, tesorería y control financiero '
-                    'desde una interfaz mucho más limpia, moderna y agradable de usar.'
+                    'Gestiona importaciones, incidencias, fianzas, tesorerÃ­a y control financiero '
+                    'desde una interfaz mucho mÃ¡s limpia, moderna y agradable de usar.'
                 '</div>'
 
                 '<div style="display:flex; flex-wrap:wrap; gap:12px;">'
@@ -624,39 +655,39 @@ def generar_email_recordatorio_cobro(nombre_cliente, factura_id, importe, fecha_
     cuerpo = (
         f"Estimado/a {nombre_cliente},\n\n"
         f"Le escribimos para recordarle que la factura {factura_id}, emitida con fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} €, figura actualmente como pendiente de cobro.\n\n"
-        f"Le agradeceríamos que revisara el estado del pago y, en caso de estar ya realizado, "
+        f"por importe de {importe:.2f} â‚¬, figura actualmente como pendiente de cobro.\n\n"
+        f"Le agradecerÃ­amos que revisara el estado del pago y, en caso de estar ya realizado, "
         f"nos lo indicara para actualizar nuestro registro.\n\n"
-        f"Quedamos a su disposición para cualquier aclaración.\n\n"
-        f"Un saludo,\nAdministración"
+        f"Quedamos a su disposiciÃ³n para cualquier aclaraciÃ³n.\n\n"
+        f"Un saludo,\nAdministraciÃ³n"
     )
 
     return asunto, cuerpo
 
 
 def generar_email_envio_factura(nombre_cliente, factura_id, importe, fecha_factura):
-    asunto = f"Envío de factura {factura_id}"
+    asunto = f"EnvÃ­o de factura {factura_id}"
 
     cuerpo = (
         f"Estimado/a {nombre_cliente},\n\n"
         f"Le remitimos la factura {factura_id}, de fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} €.\n\n"
-        f"Quedamos a su disposición para cualquier consulta.\n\n"
-        f"Un saludo,\nAdministración"
+        f"por importe de {importe:.2f} â‚¬.\n\n"
+        f"Quedamos a su disposiciÃ³n para cualquier consulta.\n\n"
+        f"Un saludo,\nAdministraciÃ³n"
     )
 
     return asunto, cuerpo
 
 
 def generar_email_proveedor(nombre_proveedor, factura_id, importe, fecha_factura):
-    asunto = f"Revisión de factura proveedor {factura_id}"
+    asunto = f"RevisiÃ³n de factura proveedor {factura_id}"
 
     cuerpo = (
         f"Estimado/a {nombre_proveedor},\n\n"
         f"Estamos revisando la factura {factura_id}, con fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} €.\n\n"
-        f"Le agradeceríamos confirmación del estado o cualquier aclaración adicional.\n\n"
-        f"Un saludo,\nAdministración"
+        f"por importe de {importe:.2f} â‚¬.\n\n"
+        f"Le agradecerÃ­amos confirmaciÃ³n del estado o cualquier aclaraciÃ³n adicional.\n\n"
+        f"Un saludo,\nAdministraciÃ³n"
     )
 
     return asunto, cuerpo
@@ -675,8 +706,8 @@ def acciones_sugeridas_pyme():
                     "Prioridad": "Media",
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
-                    "Acción sugerida": "Revisar cobro o enviar recordatorio",
-                    "Detalle": f"{row['total']:.2f} € | {row['fecha_emision']}"
+                    "AcciÃ³n sugerida": "Revisar cobro o enviar recordatorio",
+                    "Detalle": f"{row['total']:.2f} â‚¬ | {row['fecha_emision']}"
                 })
 
             df_compras = df_cobros[df_cobros["tipo"] == "compra"].copy()
@@ -686,8 +717,8 @@ def acciones_sugeridas_pyme():
                     "Prioridad": "Media",
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
-                    "Acción sugerida": "Revisar pago a proveedor",
-                    "Detalle": f"{row['total']:.2f} € | {row['fecha_emision']}"
+                    "AcciÃ³n sugerida": "Revisar pago a proveedor",
+                    "Detalle": f"{row['total']:.2f} â‚¬ | {row['fecha_emision']}"
                 })
     except Exception:
         pass
@@ -700,14 +731,14 @@ def acciones_sugeridas_pyme():
                 "Prioridad": "Alta",
                 "Referencia": f"Movimiento {row['id']}",
                 "Tercero": "-",
-                "Acción sugerida": "Conciliar movimiento",
-                "Detalle": f"{row['fecha']} | {row['concepto']} | {row['importe']:.2f} €"
+                "AcciÃ³n sugerida": "Conciliar movimiento",
+                "Detalle": f"{row['fecha']} | {row['concepto']} | {row['importe']:.2f} â‚¬"
             })
     except Exception:
         pass
 
     if not acciones:
-        return pd.DataFrame(columns=["Tipo", "Prioridad", "Referencia", "Tercero", "Acción sugerida", "Detalle"])
+        return pd.DataFrame(columns=["Tipo", "Prioridad", "Referencia", "Tercero", "AcciÃ³n sugerida", "Detalle"])
 
     return pd.DataFrame(acciones)
 
@@ -715,7 +746,7 @@ def _normalizar_texto_conciliacion(texto):
     import re
 
     txt = str(texto or "").lower().strip()
-    txt = txt.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+    txt = txt.replace("Ã¡", "a").replace("Ã©", "e").replace("Ã­", "i").replace("Ã³", "o").replace("Ãº", "u")
     txt = re.sub(r"[^a-z0-9\s]", " ", txt)
     txt = re.sub(r"\s+", " ", txt).strip()
     return txt
@@ -746,7 +777,7 @@ def _score_similitud_conciliacion(concepto_movimiento, nombre_tercero, concepto_
     # Coincidencias entre concepto del movimiento y concepto de factura
     score += 2 * len(tokens_mov.intersection(tokens_fac))
 
-    # Bonus si el nombre del tercero aparece más o menos directo
+    # Bonus si el nombre del tercero aparece mÃ¡s o menos directo
     nombre_simple = _normalizar_texto_conciliacion(nombre_tercero)
     mov_simple = _normalizar_texto_conciliacion(concepto_movimiento)
 
@@ -842,9 +873,9 @@ def total_inmovilizado_rapido():
         conn.close()
 
 def pantalla_panel_control():
-    st.markdown('<div class="block-chip">Visión general</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-chip">VisiÃ³n general</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Panel de control</div>', unsafe_allow_html=True)
-    st.caption("Un resumen más visual, claro y moderno del estado de tu sistema.")
+    st.caption("Un resumen mÃ¡s visual, claro y moderno del estado de tu sistema.")
 
     try:
         resumen = resumen_conciliacion()
@@ -906,7 +937,7 @@ def pantalla_panel_control():
             <div class="kpi-card">
                 <div class="kpi-label">Estado general</div>
                 <div class="kpi-value">{estado}</div>
-                <div class="kpi-meta">Situación global del sistema</div>
+                <div class="kpi-meta">SituaciÃ³n global del sistema</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -980,9 +1011,9 @@ def pantalla_panel_control():
             try:
                 resultado = auto_conciliar_por_ia(score_minimo=0.85)
                 if resultado.empty:
-                    st.info("No hubo conciliaciones automáticas.")
+                    st.info("No hubo conciliaciones automÃ¡ticas.")
                 else:
-                    st.success("Conciliación ejecutada.")
+                    st.success("ConciliaciÃ³n ejecutada.")
                     st.dataframe(resultado, use_container_width=True)
             except Exception as e:
                 st.error(str(e))
@@ -1152,14 +1183,14 @@ def pintar_resumen_anual_igic(resumen_igic_trimestres, year_actual):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Repercutido", f"{total_repercutido:,.2f} €")
+        st.metric("Repercutido", f"{total_repercutido:,.2f} â‚¬")
 
     with col2:
-        st.metric("Soportado", f"{total_soportado:,.2f} €")
+        st.metric("Soportado", f"{total_soportado:,.2f} â‚¬")
 
     with col3:
         etiqueta = "A ingresar" if total_resultado > 0 else "A compensar" if total_resultado < 0 else "Equilibrado"
-        st.metric("Resultado", f"{total_resultado:,.2f} €", etiqueta)
+        st.metric("Resultado", f"{total_resultado:,.2f} â‚¬", etiqueta)
 
 def pintar_card_trimestre_igic(info, datos):
     repercutido = round(float(datos.get("repercutido", 0.0)), 2)
@@ -1185,17 +1216,17 @@ def pintar_card_trimestre_igic(info, datos):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.metric("Repercutido", f"{repercutido:,.2f} €")
+            st.metric("Repercutido", f"{repercutido:,.2f} â‚¬")
 
         with col2:
-            st.metric("Soportado", f"{soportado:,.2f} €")
+            st.metric("Soportado", f"{soportado:,.2f} â‚¬")
 
         with col3:
-            st.metric("Resultado", f"{resultado:,.2f} €")
+            st.metric("Resultado", f"{resultado:,.2f} â‚¬")
 
-        st.markdown("#### Liquidación")
-        st.write(f"**Presentación:** {info['presentacion']}")
-        st.write(f"**Pago límite:** {info['pago']}")
+        st.markdown("#### LiquidaciÃ³n")
+        st.write(f"**PresentaciÃ³n:** {info['presentacion']}")
+        st.write(f"**Pago lÃ­mite:** {info['pago']}")
 
         c1, c2, c3 = st.columns(3)
 
@@ -1203,7 +1234,7 @@ def pintar_card_trimestre_igic(info, datos):
             st.link_button("Modelo 420", info["modelo_url"], use_container_width=True)
 
         with c2:
-            st.link_button("Presentación", info["sede_url"], use_container_width=True)
+            st.link_button("PresentaciÃ³n", info["sede_url"], use_container_width=True)
 
         with c3:
             st.link_button("Calendario ATC", info["calendario_url"], use_container_width=True)
@@ -1265,14 +1296,14 @@ def pantalla_resumen_financiero(cursor):
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Ventas totales", f"{ventas:.2f} €")
-        st.metric("IGIC repercutido", f"{igic_repercutido:.2f} €")
+        st.metric("Ventas totales", f"{ventas:.2f} â‚¬")
+        st.metric("IGIC repercutido", f"{igic_repercutido:.2f} â‚¬")
     with col2:
-        st.metric("Compras totales", f"{compras:.2f} €")
-        st.metric("IGIC soportado", f"{igic_soportado:.2f} €")
+        st.metric("Compras totales", f"{compras:.2f} â‚¬")
+        st.metric("IGIC soportado", f"{igic_soportado:.2f} â‚¬")
     with col3:
-        st.metric("Beneficio bruto", f"{beneficio:.2f} €")
-        st.metric("IGIC a pagar", f"{igic_pagar:.2f} €")
+        st.metric("Beneficio bruto", f"{beneficio:.2f} â‚¬")
+        st.metric("IGIC a pagar", f"{igic_pagar:.2f} â‚¬")
     
 
     filas_igic = []
@@ -1287,8 +1318,8 @@ def pantalla_resumen_financiero(cursor):
             "IGIC repercutido": datos["repercutido"],
             "IGIC soportado": datos["soportado"],
             "Resultado": datos["resultado"],
-            "Presentación": info["presentacion"],
-            "Pago límite": info["pago"],
+            "PresentaciÃ³n": info["presentacion"],
+            "Pago lÃ­mite": info["pago"],
         })
 
     # =========================
@@ -1322,26 +1353,26 @@ def pantalla_resumen_financiero(cursor):
         info = obtener_info_liquidacion_igic(trimestre, year_actual)
         datos = resumen_igic_trimestres[trimestre]
 
-        with st.expander(f"{info['label']} | Liquidación IGIC"):
+        with st.expander(f"{info['label']} | LiquidaciÃ³n IGIC"):
             st.write(f"**Periodo:** {info['periodo']}")
-            st.write(f"**IGIC repercutido:** {datos['repercutido']:.2f} €")
-            st.write(f"**IGIC soportado:** {datos['soportado']:.2f} €")
-            st.write(f"**Resultado:** {datos['resultado']:.2f} €")
-            st.write(f"**Presentación:** {info['presentacion']}")
-            st.write(f"**Pago límite:** {info['pago']}")
+            st.write(f"**IGIC repercutido:** {datos['repercutido']:.2f} â‚¬")
+            st.write(f"**IGIC soportado:** {datos['soportado']:.2f} â‚¬")
+            st.write(f"**Resultado:** {datos['resultado']:.2f} â‚¬")
+            st.write(f"**PresentaciÃ³n:** {info['presentacion']}")
+            st.write(f"**Pago lÃ­mite:** {info['pago']}")
 
             st.markdown(f"[Modelo 420 - ATC]({info['modelo_url']})")
-            st.markdown(f"[Sede electrónica - presentación]({info['sede_url']})")
+            st.markdown(f"[Sede electrÃ³nica - presentaciÃ³n]({info['sede_url']})")
             st.markdown(f"[Calendario oficial ATC]({info['calendario_url']})")
 
-    st.subheader("Tesorería")
-    st.metric("Saldo en bancos", f"{bancos:.2f} €")
+    st.subheader("TesorerÃ­a")
+    st.metric("Saldo en bancos", f"{bancos:.2f} â‚¬")
 
     c4, c5 = st.columns(2)
     with c4:
-        st.metric("Saldo clientes", f"{clientes:.2f} €")
+        st.metric("Saldo clientes", f"{clientes:.2f} â‚¬")
     with c5:
-        st.metric("Saldo proveedores", f"{proveedores:.2f} €")
+        st.metric("Saldo proveedores", f"{proveedores:.2f} â‚¬")
 
     ventas_chart = 0.0
     compras_chart = 0.0
@@ -1374,10 +1405,10 @@ def pantalla_resumen_financiero(cursor):
                 proveedores_chart += importe if movimiento == "haber" else -importe
 
     except Exception as e:
-        st.warning(f"No se pudo calcular el gráfico desde lineas_asiento: {e}")
+        st.warning(f"No se pudo calcular el grÃ¡fico desde lineas_asiento: {e}")
 
     df_resumen_real = pd.DataFrame({
-        "Categoría": [
+        "CategorÃ­a": [
             "Ventas (7)",
             "Compras (6)",
             "Bancos (572)",
@@ -1395,9 +1426,9 @@ def pantalla_resumen_financiero(cursor):
 
     st.markdown("""
         <div class="chart-shell">
-            <div class="chart-title">Visión general por cuentas reales</div>
+            <div class="chart-title">VisiÃ³n general por cuentas reales</div>
             <div class="chart-subtitle">
-                Distribución visual de ventas, compras, bancos, clientes y proveedores sobre contabilidad real.
+                DistribuciÃ³n visual de ventas, compras, bancos, clientes y proveedores sobre contabilidad real.
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -1405,7 +1436,7 @@ def pantalla_resumen_financiero(cursor):
     if PLOTLY_DISPONIBLE:
         fig_bar = px.bar(
             df_resumen_real,
-            x="Categoría",
+            x="CategorÃ­a",
             y="Importe",
             text="Importe"
         )
@@ -1422,7 +1453,7 @@ def pantalla_resumen_financiero(cursor):
             paper_bgcolor="rgba(255,255,255,0)",
             margin=dict(l=20, r=20, t=10, b=20),
             xaxis_title="",
-            yaxis_title="Importe (€)",
+            yaxis_title="Importe (â‚¬)",
             yaxis=dict(
                 gridcolor="rgba(148,163,184,0.20)",
                 zerolinecolor="rgba(148,163,184,0.25)"
@@ -1440,7 +1471,7 @@ def pantalla_resumen_financiero(cursor):
         )
     else:
         st.bar_chart(
-            df_resumen_real.set_index("Categoría"),
+            df_resumen_real.set_index("CategorÃ­a"),
             use_container_width=True
         )
 
@@ -1469,7 +1500,7 @@ def pantalla_resumen_financiero(cursor):
         <div class="chart-shell">
             <div class="chart-title">Estado global de facturas</div>
             <div class="chart-subtitle">
-                Vista rápida del estado documental de la cartera de facturas.
+                Vista rÃ¡pida del estado documental de la cartera de facturas.
             </div>
         </div>
     """, unsafe_allow_html=True)
@@ -1481,7 +1512,7 @@ def pantalla_resumen_financiero(cursor):
             <div class="status-card status-card-pendiente">
                 <div class="status-card-title">Pendientes</div>
                 <div class="status-card-value">{pendientes}</div>
-                <div class="status-card-text">Facturas todavía abiertas o por completar.</div>
+                <div class="status-card-text">Facturas todavÃ­a abiertas o por completar.</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -1499,7 +1530,7 @@ def pantalla_resumen_financiero(cursor):
             <div class="status-card status-card-vencida">
                 <div class="status-card-title">Vencidas</div>
                 <div class="status-card-value">{vencidas}</div>
-                <div class="status-card-text">Facturas que requieren atención o revisión prioritaria.</div>
+                <div class="status-card-text">Facturas que requieren atenciÃ³n o revisiÃ³n prioritaria.</div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -1587,7 +1618,7 @@ def pantalla_resumen_financiero(cursor):
 
 def normalizar_texto_fianza(texto):
     texto = str(texto or "").strip().lower()
-    texto = texto.replace("á", "a").replace("é", "e").replace("í", "i").replace("ó", "o").replace("ú", "u")
+    texto = texto.replace("Ã¡", "a").replace("Ã©", "e").replace("Ã­", "i").replace("Ã³", "o").replace("Ãº", "u")
     return texto
 
 
@@ -1604,9 +1635,9 @@ def extraer_importes_desde_texto_fianza(texto):
         r'fianza\s*(?:de)?\s*(\d+(?:[.,]\d{1,2})?)',
         r'deposito\s*(?:de)?\s*(\d+(?:[.,]\d{1,2})?)',
         r'garantia\s*(?:de)?\s*(\d+(?:[.,]\d{1,2})?)',
-        r'(\d+(?:[.,]\d{1,2})?)\s*€?\s*(?:de\s*)?fianza',
-        r'(\d+(?:[.,]\d{1,2})?)\s*€?\s*(?:de\s*)?deposito',
-        r'(\d+(?:[.,]\d{1,2})?)\s*€?\s*(?:de\s*)?garantia',
+        r'(\d+(?:[.,]\d{1,2})?)\s*â‚¬?\s*(?:de\s*)?fianza',
+        r'(\d+(?:[.,]\d{1,2})?)\s*â‚¬?\s*(?:de\s*)?deposito',
+        r'(\d+(?:[.,]\d{1,2})?)\s*â‚¬?\s*(?:de\s*)?garantia',
     ]
 
     for patron in patrones_contexto:
@@ -1688,7 +1719,7 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
     importes_texto = extraer_importes_desde_texto_fianza(texto)
     tesoreria = obtener_sentido_tesoreria_asiento(cursor, asiento_id)
 
-    terminos_fianza_explicitos = ["fianza", "deposito", "depósito", "garantia", "garantía"]
+    terminos_fianza_explicitos = ["fianza", "deposito", "depÃ³sito", "garantia", "garantÃ­a"]
     tiene_fianza_explicita = any(p in texto for p in terminos_fianza_explicitos)
 
     if not tiene_fianza_explicita:
@@ -1703,8 +1734,8 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
             "fianza_origen": None
         }
 
-    palabras_fianza = ["fianza", "deposito", "garantia", "garantía", "depósito"]
-    palabras_devolucion = ["devol", "reintegro", "refund", "reembolso", "cancelacion", "cancelación"]
+    palabras_fianza = ["fianza", "deposito", "garantia", "garantÃ­a", "depÃ³sito"]
+    palabras_devolucion = ["devol", "reintegro", "refund", "reembolso", "cancelacion", "cancelaciÃ³n"]
 
     score_fianza = 0
     score_devolucion = 0
@@ -1712,31 +1743,31 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
 
     if any(p in texto for p in palabras_fianza):
         score_fianza += 50
-        motivos.append("El concepto contiene términos típicos de fianza")
+        motivos.append("El concepto contiene tÃ©rminos tÃ­picos de fianza")
 
     if any(p in texto for p in palabras_devolucion):
         score_devolucion += 40
-        motivos.append("El concepto contiene términos de devolución o reintegro")
+        motivos.append("El concepto contiene tÃ©rminos de devoluciÃ³n o reintegro")
 
     if tesoreria["sentido"] == "entrada":
         score_fianza += 25
-        motivos.append("El asiento refleja entrada de tesorería")
+        motivos.append("El asiento refleja entrada de tesorerÃ­a")
 
     if tesoreria["sentido"] == "salida":
         score_devolucion += 25
-        motivos.append("El asiento refleja salida de tesorería")
+        motivos.append("El asiento refleja salida de tesorerÃ­a")
 
     importe_sugerido = 0.0
 
     if importes_texto["prioritarios"]:
         importe_sugerido = float(importes_texto["prioritarios"][0])
-        motivos.append("Se ha detectado un importe junto a términos de fianza/deposito/garantia")
+        motivos.append("Se ha detectado un importe junto a tÃ©rminos de fianza/deposito/garantia")
     elif importes_texto["generales"]:
         importe_sugerido = float(importes_texto["generales"][0])
-        motivos.append("Se ha detectado un importe numérico en el concepto")
+        motivos.append("Se ha detectado un importe numÃ©rico en el concepto")
     else:
         importe_sugerido = float(tesoreria["importe_tesoreria"] or 0)
-        motivos.append("Se usa el importe detectado en tesorería al no encontrar importe claro en el concepto")
+        motivos.append("Se usa el importe detectado en tesorerÃ­a al no encontrar importe claro en el concepto")
 
     if score_fianza == 0 and score_devolucion == 0:
         return {
@@ -1762,7 +1793,7 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
         if fianza_origen:
             score_devolucion += 35
             motivos.append(
-                f"Se ha encontrado una fianza recibida candidata con saldo pendiente {fianza_origen['saldo_pendiente']:.2f} €"
+                f"Se ha encontrado una fianza recibida candidata con saldo pendiente {fianza_origen['saldo_pendiente']:.2f} â‚¬"
             )
 
         tipo = "fianza_devuelta"
@@ -1834,12 +1865,12 @@ def detectar_devolucion_fianza_desde_concepto(concepto):
 
     palabras_clave = [
         "devolucion fianza",
-        "devolución fianza",
+        "devoluciÃ³n fianza",
         "devolver fianza",
         "se devuelve fianza",
         "devolvemos fianza",
         "devolucion de fianza",
-        "devolución de fianza"
+        "devoluciÃ³n de fianza"
     ]
 
     if not ("fianza" in texto and ("devol" in texto or "refund" in texto)):
@@ -1931,7 +1962,7 @@ def existe_devolucion_fianza_asociada(asiento_id, concepto_origen):
             if origen_detectado == int(asiento_id):
                 return int(asiento_dev_id)
 
-        concepto_dev = f"Devolución de fianza origen"
+        concepto_dev = f"DevoluciÃ³n de fianza origen"
 
         cursor.execute("""
             SELECT id
@@ -2027,13 +2058,13 @@ def puede_crearse_operacion_fianza(fila):
     if confianza == "baja":
         return {
             "ok": False,
-            "motivo": "Confianza baja. Revisión manual obligatoria."
+            "motivo": "Confianza baja. RevisiÃ³n manual obligatoria."
         }
 
-    if tipo_sugerido == "Devolución de fianza" and pd.isna(fianza_origen):
+    if tipo_sugerido == "DevoluciÃ³n de fianza" and pd.isna(fianza_origen):
         return {
             "ok": False,
-            "motivo": "No se ha encontrado fianza origen para la devolución."
+            "motivo": "No se ha encontrado fianza origen para la devoluciÃ³n."
         }
 
     return {
@@ -2043,15 +2074,15 @@ def puede_crearse_operacion_fianza(fila):
 
 def pantalla_fianzas_detectadas(cursor):
     st.markdown('<div class="section-title">Fianzas detectadas</div>', unsafe_allow_html=True)
-    st.caption("Revisa, ajusta importes, marca varias y crea operaciones de fianza con detección inteligente, sin duplicados.")
+    st.caption("Revisa, ajusta importes, marca varias y crea operaciones de fianza con detecciÃ³n inteligente, sin duplicados.")
 
     col_reset_1, col_reset_2 = st.columns([1, 3])
 
     with col_reset_1:
-        if st.button("🧹 Limpiar selección", key="reset_estado_fianzas"):
+        if st.button("ðŸ§¹ Limpiar selecciÃ³n", key="reset_estado_fianzas"):
             st.session_state["fianzas_marcadas_manualmente"] = {}
             st.session_state["fianzas_edicion_manual"] = {}
-            st.success("Selección y edición manual limpiadas.")
+            st.success("SelecciÃ³n y ediciÃ³n manual limpiadas.")
             st.rerun()
 
     # =========================
@@ -2063,7 +2094,7 @@ def pantalla_fianzas_detectadas(cursor):
         texto_busqueda = st.text_input(
             "Buscar en concepto",
             value="",
-            placeholder="Ej: fianza, depósito, cliente, alquiler, devolución...",
+            placeholder="Ej: fianza, depÃ³sito, cliente, alquiler, devoluciÃ³n...",
             key="fianzas_texto_busqueda"
         ).strip().lower()
 
@@ -2125,14 +2156,14 @@ def pantalla_fianzas_detectadas(cursor):
             "Asiento origen": int(asiento_id),
             "Fecha": str(fecha),
             "Concepto": concepto_txt,
-            "Tipo sugerido": "Fianza recibida" if analisis["tipo"] == "fianza_recibida" else "Devolución de fianza",
+            "Tipo sugerido": "Fianza recibida" if analisis["tipo"] == "fianza_recibida" else "DevoluciÃ³n de fianza",
             "Confianza": analisis["confianza"].capitalize(),
             "Importe sugerido": float(analisis["importe_sugerido"]),
             "Importe fianza": float(analisis["importe_sugerido"]),
-            "Cuenta tesorería": analisis["cuenta_tesoreria"],
-            "Ya creada": "Sí" if ya_creada else "No",
+            "Cuenta tesorerÃ­a": analisis["cuenta_tesoreria"],
+            "Ya creada": "SÃ­" if ya_creada else "No",
             "Asiento fianza": int(asiento_fianza_existente) if asiento_fianza_existente else None,
-            "Asiento devolución": int(asiento_devolucion_existente) if asiento_devolucion_existente else None,
+            "Asiento devoluciÃ³n": int(asiento_devolucion_existente) if asiento_devolucion_existente else None,
             "Fianza origen": fianza_origen_id,
             "Saldo pendiente origen": saldo_pendiente,
             "Motivos": " | ".join(analisis["motivos"])
@@ -2145,7 +2176,7 @@ def pantalla_fianzas_detectadas(cursor):
     df_fianzas = pd.DataFrame(registros)
 
     # =========================
-    # ESTADO EN SESIÓN
+    # ESTADO EN SESIÃ“N
     # =========================
     if "fianzas_marcadas_manualmente" not in st.session_state:
         st.session_state["fianzas_marcadas_manualmente"] = {}
@@ -2153,7 +2184,7 @@ def pantalla_fianzas_detectadas(cursor):
     if "fianzas_edicion_manual" not in st.session_state:
         st.session_state["fianzas_edicion_manual"] = {}
 
-    # aplicar edición manual persistida
+    # aplicar ediciÃ³n manual persistida
     for idx, row in df_fianzas.iterrows():
         asiento_origen = int(row["Asiento origen"])
 
@@ -2163,8 +2194,8 @@ def pantalla_fianzas_detectadas(cursor):
             if "Importe fianza" in ed:
                 df_fianzas.at[idx, "Importe fianza"] = float(ed["Importe fianza"])
 
-            if "Cuenta tesorería" in ed:
-                df_fianzas.at[idx, "Cuenta tesorería"] = str(ed["Cuenta tesorería"])
+            if "Cuenta tesorerÃ­a" in ed:
+                df_fianzas.at[idx, "Cuenta tesorerÃ­a"] = str(ed["Cuenta tesorerÃ­a"])
 
         df_fianzas.at[idx, "Seleccionar"] = st.session_state["fianzas_marcadas_manualmente"].get(
             asiento_origen,
@@ -2172,7 +2203,7 @@ def pantalla_fianzas_detectadas(cursor):
         )
 
     # =========================
-    # BOTONES DE ACCIÓN RÁPIDA
+    # BOTONES DE ACCIÃ“N RÃPIDA
     # =========================
     col_b1, col_b2, col_b3 = st.columns([1, 1, 2])
 
@@ -2208,13 +2239,13 @@ def pantalla_fianzas_detectadas(cursor):
             "Confianza": st.column_config.TextColumn("Confianza", disabled=True),
             "Importe sugerido": st.column_config.NumberColumn("Importe sugerido", format="%.2f", disabled=True),
             "Importe fianza": st.column_config.NumberColumn("Importe fianza", format="%.2f", min_value=0.0),
-            "Cuenta tesorería": st.column_config.SelectboxColumn(
-                "Cuenta tesorería",
+            "Cuenta tesorerÃ­a": st.column_config.SelectboxColumn(
+                "Cuenta tesorerÃ­a",
                 options=["570 Caja", "572 Bancos"]
             ),
             "Ya creada": st.column_config.TextColumn("Ya creada", disabled=True),
             "Asiento fianza": st.column_config.NumberColumn("Asiento fianza", disabled=True),
-            "Asiento devolución": st.column_config.NumberColumn("Asiento devolución", disabled=True),
+            "Asiento devoluciÃ³n": st.column_config.NumberColumn("Asiento devoluciÃ³n", disabled=True),
             "Fianza origen": st.column_config.NumberColumn("Fianza origen", disabled=True),
             "Saldo pendiente origen": st.column_config.NumberColumn("Saldo pendiente origen", format="%.2f", disabled=True),
             "Motivos": st.column_config.TextColumn("Motivos", disabled=True, width="large"),
@@ -2222,20 +2253,20 @@ def pantalla_fianzas_detectadas(cursor):
         key="editor_fianzas_detectadas"
     )
 
-    # persistir marcado y edición
+    # persistir marcado y ediciÃ³n
     for _, row in df_editado.iterrows():
         asiento_origen = int(row["Asiento origen"])
 
         st.session_state["fianzas_marcadas_manualmente"][asiento_origen] = bool(row["Seleccionar"])
         st.session_state["fianzas_edicion_manual"][asiento_origen] = {
             "Importe fianza": float(row["Importe fianza"] or 0),
-            "Cuenta tesorería": str(row["Cuenta tesorería"])
+            "Cuenta tesorerÃ­a": str(row["Cuenta tesorerÃ­a"])
         }
 
     seleccionadas = df_editado[df_editado["Seleccionar"] == True].copy()
 
     # =========================
-    # MÉTRICAS
+    # MÃ‰TRICAS
     # =========================
     col_m1, col_m2, col_m3 = st.columns(3)
 
@@ -2254,8 +2285,8 @@ def pantalla_fianzas_detectadas(cursor):
     # =========================
     # EDITOR INDIVIDUAL FINO
     # =========================
-    st.markdown("### Editar una operación concreta")
-    st.caption("Usa esta zona para revisar bien el tipo, el importe y la cuenta antes de crear la operación.")
+    st.markdown("### Editar una operaciÃ³n concreta")
+    st.caption("Usa esta zona para revisar bien el tipo, el importe y la cuenta antes de crear la operaciÃ³n.")
 
     opciones_asiento = {
         f"Asiento {int(row['Asiento origen'])} | {row['Fecha']} | {str(row['Concepto'])[:90]}": int(row["Asiento origen"])
@@ -2277,10 +2308,10 @@ def pantalla_fianzas_detectadas(cursor):
     confianza_edicion = str(fila_edicion["Confianza"])
     importe_sugerido_edicion = float(fila_edicion["Importe sugerido"])
     importe_actual_edicion = float(fila_edicion["Importe fianza"])
-    cuenta_actual_edicion = str(fila_edicion["Cuenta tesorería"])
-    ya_creada_edicion = str(fila_edicion["Ya creada"]) == "Sí"
+    cuenta_actual_edicion = str(fila_edicion["Cuenta tesorerÃ­a"])
+    ya_creada_edicion = str(fila_edicion["Ya creada"]) == "SÃ­"
     asiento_fianza_edicion = fila_edicion["Asiento fianza"]
-    asiento_devolucion_edicion = fila_edicion["Asiento devolución"]
+    asiento_devolucion_edicion = fila_edicion["Asiento devoluciÃ³n"]
     fianza_origen_edicion = fila_edicion["Fianza origen"]
     saldo_pendiente_origen_edicion = float(fila_edicion["Saldo pendiente origen"] or 0)
     motivos_edicion = str(fila_edicion["Motivos"])
@@ -2291,16 +2322,16 @@ def pantalla_fianzas_detectadas(cursor):
     st.write(f"**Tipo sugerido:** {tipo_sugerido_edicion}")
     st.write(f"**Confianza:** {confianza_edicion}")
     if confianza_edicion.lower() == "alta":
-        st.success("Detección sólida.")
+        st.success("DetecciÃ³n sÃ³lida.")
     elif confianza_edicion.lower() == "media":
-        st.info("Detección razonable. Conviene revisar antes de crear.")
+        st.info("DetecciÃ³n razonable. Conviene revisar antes de crear.")
     else:
-        st.warning("Detección débil. No se permitirá creación automática.")
-    st.write(f"**Importe sugerido detectado:** {importe_sugerido_edicion:.2f} €")
+        st.warning("DetecciÃ³n dÃ©bil. No se permitirÃ¡ creaciÃ³n automÃ¡tica.")
+    st.write(f"**Importe sugerido detectado:** {importe_sugerido_edicion:.2f} â‚¬")
 
     if pd.notna(fianza_origen_edicion):
         st.write(f"**Fianza origen encontrada:** {int(fianza_origen_edicion)}")
-        st.write(f"**Saldo pendiente origen:** {saldo_pendiente_origen_edicion:.2f} €")
+        st.write(f"**Saldo pendiente origen:** {saldo_pendiente_origen_edicion:.2f} â‚¬")
 
     if motivos_edicion:
         st.info(motivos_edicion)
@@ -2309,7 +2340,7 @@ def pantalla_fianzas_detectadas(cursor):
 
     with col_e1:
         nuevo_importe = st.number_input(
-            "Importe de operación",
+            "Importe de operaciÃ³n",
             min_value=0.0,
             step=0.01,
             value=float(importe_actual_edicion),
@@ -2318,7 +2349,7 @@ def pantalla_fianzas_detectadas(cursor):
 
     with col_e2:
         nueva_cuenta = st.selectbox(
-            "Cuenta tesorería",
+            "Cuenta tesorerÃ­a",
             ["570 Caja", "572 Bancos"],
             index=0 if cuenta_actual_edicion == "570 Caja" else 1,
             key=f"editar_cuenta_fianza_{asiento_edicion_id}"
@@ -2327,12 +2358,12 @@ def pantalla_fianzas_detectadas(cursor):
     col_e3, col_e4, col_e5, col_e6 = st.columns(4)
 
     with col_e3:
-        if st.button("Guardar edición", key=f"guardar_edicion_fianza_{asiento_edicion_id}"):
+        if st.button("Guardar ediciÃ³n", key=f"guardar_edicion_fianza_{asiento_edicion_id}"):
             st.session_state["fianzas_edicion_manual"][int(asiento_edicion_id)] = {
                 "Importe fianza": float(nuevo_importe),
-                "Cuenta tesorería": nueva_cuenta
+                "Cuenta tesorerÃ­a": nueva_cuenta
             }
-            st.success("Edición guardada.")
+            st.success("EdiciÃ³n guardada.")
             st.rerun()
 
     with col_e4:
@@ -2356,7 +2387,7 @@ def pantalla_fianzas_detectadas(cursor):
                     estado="descartada",
                     comentario="Marcada manualmente como no fianza"
                 )
-                st.success("Marcada como no fianza. Ya no volverá a salir en pendientes.")
+                st.success("Marcada como no fianza. Ya no volverÃ¡ a salir en pendientes.")
                 st.rerun()
 
     with col_e6:
@@ -2371,7 +2402,7 @@ def pantalla_fianzas_detectadas(cursor):
             if not validacion_creacion["ok"]:
                 st.warning(validacion_creacion["motivo"])
             else:
-                if st.button("Crear solo esta operación", key=f"crear_una_fianza_{asiento_edicion_id}"):
+                if st.button("Crear solo esta operaciÃ³n", key=f"crear_una_fianza_{asiento_edicion_id}"):
                     if tipo_sugerido_edicion == "Fianza recibida":
                         resultado_fianza = crear_asiento_fianza_recibida(
                             fecha=fecha_edicion,
@@ -2383,7 +2414,7 @@ def pantalla_fianzas_detectadas(cursor):
                     else:
                         resultado_fianza = crear_asiento_fianza_devuelta(
                             fecha=fecha_edicion,
-                            concepto=f"Devolución de fianza origen {int(fianza_origen_edicion)} - asiento origen {asiento_edicion_id} - {concepto_edicion}",
+                            concepto=f"DevoluciÃ³n de fianza origen {int(fianza_origen_edicion)} - asiento origen {asiento_edicion_id} - {concepto_edicion}",
                             importe=float(nuevo_importe),
                             cuenta_tesoreria=nueva_cuenta,
                             asiento_origen_id=asiento_edicion_id,
@@ -2394,10 +2425,10 @@ def pantalla_fianzas_detectadas(cursor):
                         guardar_estado_revision_fianza(
                             asiento_origen_id=asiento_edicion_id,
                             estado="creada",
-                            comentario=f"Operación creada: {resultado_fianza['asiento_id']}"
+                            comentario=f"OperaciÃ³n creada: {resultado_fianza['asiento_id']}"
                         )
                         st.success(
-                            f"Operación creada correctamente (ID: {resultado_fianza['asiento_id']})"
+                            f"OperaciÃ³n creada correctamente (ID: {resultado_fianza['asiento_id']})"
                         )
                         st.rerun()
                     else:
@@ -2410,15 +2441,15 @@ def pantalla_fianzas_detectadas(cursor):
                             st.warning(resultado_fianza["error"])
                             st.rerun()
                         else:
-                            st.error(f"Error al crear la operación: {resultado_fianza['error']}")
+                            st.error(f"Error al crear la operaciÃ³n: {resultado_fianza['error']}")
 
     st.divider()
 
     # =========================
-    # CREACIÓN MASIVA
+    # CREACIÃ“N MASIVA
     # =========================
-    st.markdown("### Creación masiva")
-    st.caption("Crea todas las filas seleccionadas respetando importes, tipo sugerido y cuenta de tesorería.")
+    st.markdown("### CreaciÃ³n masiva")
+    st.caption("Crea todas las filas seleccionadas respetando importes, tipo sugerido y cuenta de tesorerÃ­a.")
 
     if seleccionadas.empty:
         st.info("Marca una o varias filas para crear las operaciones.")
@@ -2435,7 +2466,7 @@ def pantalla_fianzas_detectadas(cursor):
             concepto = str(row["Concepto"])
             tipo_sugerido = str(row["Tipo sugerido"])
             importe_fianza = float(row["Importe fianza"] or 0)
-            cuenta_tesoreria = str(row["Cuenta tesorería"])
+            cuenta_tesoreria = str(row["Cuenta tesorerÃ­a"])
             fianza_origen = row["Fianza origen"]
 
             validacion_creacion = puede_crearse_operacion_fianza(row)
@@ -2459,7 +2490,7 @@ def pantalla_fianzas_detectadas(cursor):
             else:
                 resultado_fianza = crear_asiento_fianza_devuelta(
                     fecha=fecha,
-                    concepto=f"Devolución de fianza origen {int(fianza_origen)} - asiento origen {asiento_id} - {concepto}",
+                    concepto=f"DevoluciÃ³n de fianza origen {int(fianza_origen)} - asiento origen {asiento_id} - {concepto}",
                     importe=importe_fianza,
                     cuenta_tesoreria=cuenta_tesoreria,
                     asiento_origen_id=asiento_id,
@@ -2470,7 +2501,7 @@ def pantalla_fianzas_detectadas(cursor):
                 guardar_estado_revision_fianza(
                     asiento_origen_id=asiento_id,
                     estado="creada",
-                    comentario=f"Operación creada: {resultado_fianza['asiento_id']}"
+                    comentario=f"OperaciÃ³n creada: {resultado_fianza['asiento_id']}"
                 )
 
                 creados.append({
@@ -2504,7 +2535,7 @@ def pantalla_fianzas_detectadas(cursor):
             st.dataframe(pd.DataFrame(creados), use_container_width=True)
 
         if duplicados:
-            st.warning(f"{len(duplicados)} ya existían y no se duplicaron.")
+            st.warning(f"{len(duplicados)} ya existÃ­an y no se duplicaron.")
             st.dataframe(pd.DataFrame(duplicados), use_container_width=True)
 
         if errores:
@@ -2528,7 +2559,7 @@ def pantalla_libro_diario(cursor):
 
     with col_f1:
         filtro_tipo = st.selectbox(
-            "Filtrar por tipo de operación",
+            "Filtrar por tipo de operaciÃ³n",
             [
                 "Todos",
                 "compra",
@@ -2555,7 +2586,7 @@ def pantalla_libro_diario(cursor):
 
     with col_f3:
         limite = st.number_input(
-            "Número máximo de asientos a mostrar",
+            "NÃºmero mÃ¡ximo de asientos a mostrar",
             min_value=50,
             max_value=2000,
             value=200,
@@ -2586,7 +2617,7 @@ def pantalla_libro_diario(cursor):
 
     with col_f7:
         importe_minimo = st.number_input(
-            "Importe mínimo del asiento",
+            "Importe mÃ­nimo del asiento",
             min_value=0.0,
             step=1.0,
             value=0.0,
@@ -2630,7 +2661,7 @@ def pantalla_libro_diario(cursor):
     # =========================
     asientos_filtrados = []
 
-    palabras_clave = ["fianza", "deposito", "depósito", "garantia", "garantía"]
+    palabras_clave = ["fianza", "deposito", "depÃ³sito", "garantia", "garantÃ­a"]
 
     for asiento in asientos:
         asiento_id, fecha, concepto, tipo_operacion = asiento
@@ -2690,7 +2721,7 @@ def pantalla_libro_diario(cursor):
     with c1:
         st.metric("Asientos filtrados", total_resultados)
     with c2:
-        st.metric("Límite aplicado", limite)
+        st.metric("LÃ­mite aplicado", limite)
 
     # vista tabla resumen
     st.divider()
@@ -2727,7 +2758,7 @@ def pantalla_libro_diario(cursor):
 
             st.write(f"**Concepto:** {concepto}")
             st.write(f"**Tipo:** {tipo_operacion}")
-            st.write(f"**Importe total del asiento (debe):** {total_debe:.2f} €")
+            st.write(f"**Importe total del asiento (debe):** {total_debe:.2f} â‚¬")
             st.dataframe(df_lineas, use_container_width=True)
 
             analisis_fianza = analizar_asiento_fianza(cursor, asiento_id, fecha, concepto)
@@ -2744,7 +2775,7 @@ def pantalla_libro_diario(cursor):
             if mostrar_aviso_fianza and not es_asiento_ya_fianza:
                 st.warning(
                     f"Posible fianza detectada en el concepto. "
-                    f"Importe sugerido: {analisis_fianza['importe_sugerido']:.2f} €"
+                    f"Importe sugerido: {analisis_fianza['importe_sugerido']:.2f} â‚¬"
                 )
 
                 col_fianza_1, col_fianza_2, col_fianza_3 = st.columns(3)
@@ -2760,7 +2791,7 @@ def pantalla_libro_diario(cursor):
 
                 with col_fianza_2:
                     cuenta_tesoreria = st.selectbox(
-                        "Cuenta tesorería",
+                        "Cuenta tesorerÃ­a",
                         ["570 Caja", "572 Bancos"],
                         index=0,
                         key=f"cuenta_tesoreria_fianza_{asiento_id}"
@@ -2812,7 +2843,7 @@ def pantalla_libro_diario(cursor):
                 )
 
 def pantalla_balance_comprobacion():
-    st.markdown('<div class="section-title">Balance de comprobación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Balance de comprobaciÃ³n</div>', unsafe_allow_html=True)
 
     df_balance = balance_comprobacion()
     st.dataframe(df_balance, use_container_width=True)
@@ -2822,14 +2853,14 @@ def pantalla_balance_comprobacion():
 
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Total Debe", f"{total_debe:.2f} €")
+        st.metric("Total Debe", f"{total_debe:.2f} â‚¬")
     with col2:
-        st.metric("Total Haber", f"{total_haber:.2f} €")
+        st.metric("Total Haber", f"{total_haber:.2f} â‚¬")
 
     if round(total_debe, 2) == round(total_haber, 2):
-        st.success("El balance de comprobación cuadra")
+        st.success("El balance de comprobaciÃ³n cuadra")
     else:
-        st.error("El balance de comprobación NO cuadra")
+        st.error("El balance de comprobaciÃ³n NO cuadra")
 
 
 def pantalla_libro_mayor():
@@ -2840,7 +2871,7 @@ def pantalla_libro_mayor():
 
 
 def pantalla_cuenta_resultados():
-    st.markdown('<div class="section-title">Cuenta de pérdidas y ganancias</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Cuenta de pÃ©rdidas y ganancias</div>', unsafe_allow_html=True)
     resumen, detalle = cuenta_resultados()
     st.subheader("Resumen")
     st.dataframe(resumen, use_container_width=True)
@@ -2849,7 +2880,7 @@ def pantalla_cuenta_resultados():
 
 
 def pantalla_balance_situacion():
-    st.markdown('<div class="section-title">Balance de situación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Balance de situaciÃ³n</div>', unsafe_allow_html=True)
 
     resumen, activo_no_corriente, activo_corriente, patrimonio_neto, pasivo_no_corriente, pasivo_corriente = balance_situacion()
 
@@ -3147,7 +3178,7 @@ def pantalla_control_contable():
             st.warning(f"Se detectaron {len(df_mostrar)} incidencias")
 
             if "revisada" in df_mostrar.columns:
-                df_mostrar["revisada"] = df_mostrar["revisada"].apply(lambda x: "sí" if x else "no")
+                df_mostrar["revisada"] = df_mostrar["revisada"].apply(lambda x: "sÃ­" if x else "no")
 
             st.dataframe(df_mostrar, use_container_width=True)
             st.markdown("### Revisar incidencia concreta")
@@ -3155,7 +3186,7 @@ def pantalla_control_contable():
             incidencias_con_asiento = df_mostrar[df_mostrar["asiento_id"].notna()].copy()
 
             if incidencias_con_asiento.empty:
-                st.info("Las incidencias filtradas no están asociadas a un asiento concreto.")
+                st.info("Las incidencias filtradas no estÃ¡n asociadas a un asiento concreto.")
             else:
                 opciones_incidencia = {}
 
@@ -3199,7 +3230,7 @@ def pantalla_control_contable():
                         st.write(f"**ID:** {asiento_id_db}")
                         st.write(f"**Fecha:** {fecha_db}")
                         st.write(f"**Concepto:** {concepto_db}")
-                        st.write(f"**Tipo operación:** {tipo_db}")
+                        st.write(f"**Tipo operaciÃ³n:** {tipo_db}")
 
                         cursor.execute("""
                             SELECT cuenta, movimiento, importe
@@ -3218,16 +3249,16 @@ def pantalla_control_contable():
                             c_det1, c_det2, c_det3 = st.columns(3)
 
                             with c_det1:
-                                st.metric("Debe", f"{total_debe:.2f} €")
+                                st.metric("Debe", f"{total_debe:.2f} â‚¬")
 
                             with c_det2:
-                                st.metric("Haber", f"{total_haber:.2f} €")
+                                st.metric("Haber", f"{total_haber:.2f} â‚¬")
 
                             with c_det3:
-                                st.metric("Diferencia", f"{(total_debe - total_haber):.2f} €")
-                            st.markdown("#### Edición manual del asiento")
+                                st.metric("Diferencia", f"{(total_debe - total_haber):.2f} â‚¬")
+                            st.markdown("#### EdiciÃ³n manual del asiento")
 
-                            with st.expander("Editar asiento y líneas", expanded=False):
+                            with st.expander("Editar asiento y lÃ­neas", expanded=False):
                                 nueva_fecha = st.text_input(
                                     "Fecha del asiento",
                                     value=str(fecha_db),
@@ -3307,7 +3338,7 @@ def pantalla_control_contable():
 
                             with ac1:
                                 if st.button("Revalidar sistema", key=f"revalidar_inc_{asiento_id_sel}"):
-                                    st.success("Validación relanzada.")
+                                    st.success("ValidaciÃ³n relanzada.")
                                     st.rerun()
                             with ac2:
                                 if st.button("Aceptar incidencia", key=f"aceptar_incidencia_{asiento_id_sel}"):
@@ -3318,7 +3349,7 @@ def pantalla_control_contable():
                                     )
 
                                     if resultado_revision.get("ok"):
-                                        st.success("Incidencia marcada como revisada. Ya no aparecerá en el listado.")
+                                        st.success("Incidencia marcada como revisada. Ya no aparecerÃ¡ en el listado.")
                                         st.rerun()
                                     else:
                                         st.error("No se pudo marcar la incidencia como revisada.")
@@ -3333,7 +3364,7 @@ def pantalla_control_contable():
                                     if st.button("Borrar este asiento", key=f"borrar_desde_control_{asiento_id_sel}"):
                                         st.session_state[clave_confirmacion] = True
                                 else:
-                                    st.warning(f"Vas a borrar el asiento {asiento_id_sel}. Esta acción no se puede deshacer.")
+                                    st.warning(f"Vas a borrar el asiento {asiento_id_sel}. Esta acciÃ³n no se puede deshacer.")
                             with ac4:
                                 if st.button("Quitar revisada", key=f"quitar_revision_inc_{asiento_id_sel}"):
                                     resultado_quitar_revision = quitar_incidencia_control_revisada(
@@ -3351,7 +3382,7 @@ def pantalla_control_contable():
                                     bc1, bc2 = st.columns(2)
 
                                     with bc1:
-                                        if st.button("Sí, borrar asiento", key=f"confirmar_borrar_desde_control_si_{asiento_id_sel}"):
+                                        if st.button("SÃ­, borrar asiento", key=f"confirmar_borrar_desde_control_si_{asiento_id_sel}"):
                                             resultado_borrado = borrar_asiento(asiento_id_sel)
                                             st.session_state[clave_confirmacion] = False
 
@@ -3365,10 +3396,10 @@ def pantalla_control_contable():
                                         if st.button("Cancelar borrado", key=f"confirmar_borrar_desde_control_no_{asiento_id_sel}"):
                                             st.session_state[clave_confirmacion] = False
 
-                            st.caption("Consejo: si el asiento está descuadrado o tiene importe absurdo, revisa primero el origen antes de borrarlo.")
+                            st.caption("Consejo: si el asiento estÃ¡ descuadrado o tiene importe absurdo, revisa primero el origen antes de borrarlo.")
 
                         else:
-                            st.warning("Este asiento no tiene líneas contables.")
+                            st.warning("Este asiento no tiene lÃ­neas contables.")
                 finally:
                     cursor.connection.close()
 
@@ -3389,12 +3420,12 @@ def pantalla_control_contable():
         if st.button("Borrar asiento seleccionado", key="boton_borrar_asiento"):
             st.session_state["confirmar_borrado_asiento"] = True
     else:
-        st.warning(f"Vas a borrar el asiento ID {asiento_id_borrar}. Esta acción no se puede deshacer.")
+        st.warning(f"Vas a borrar el asiento ID {asiento_id_borrar}. Esta acciÃ³n no se puede deshacer.")
 
         col_b1, col_b2 = st.columns(2)
 
         with col_b1:
-            if st.button("Sí, borrar asiento", key="confirmar_borrar_asiento_si"):
+            if st.button("SÃ­, borrar asiento", key="confirmar_borrar_asiento_si"):
                 resultado_borrado = borrar_asiento(asiento_id_borrar)
                 st.session_state["confirmar_borrado_asiento"] = False
 
@@ -3415,12 +3446,12 @@ def pantalla_control_contable():
         if st.button("Resetear contabilidad", key="boton_reset_contabilidad"):
             st.session_state["confirmar_reset_contable"] = True
     else:
-        st.warning("¿Seguro que quieres borrar toda la contabilidad?")
+        st.warning("Â¿Seguro que quieres borrar toda la contabilidad?")
 
         col1, col2 = st.columns(2)
 
         with col1:
-            if st.button("Sí, resetear todo", key="confirmar_reset_contable_si"):
+            if st.button("SÃ­, resetear todo", key="confirmar_reset_contable_si"):
                 resultado = reset_contabilidad()
                 st.session_state["confirmar_reset_contable"] = False
 
@@ -3448,15 +3479,15 @@ def sugerir_accion_incidencia(tipo_incidencia):
     tipo = str(tipo_incidencia or "").strip().lower()
 
     mapa = {
-        "asiento_sin_lineas": "Revisar el origen del asiento. No tiene líneas contables y normalmente debe eliminarse o reconstruirse.",
-        "asiento_descuadrado": "Revisar las líneas del asiento y corregir importes o movimientos hasta que Debe y Haber cuadren.",
-        "importe_absurdo": "Revisar el concepto y el importe detectado. Puede haberse tomado un teléfono, DNI o referencia como importe.",
-        "cliente_saldo_acreedor": "Revisar cobros, abonos o facturas del cliente. Un cliente con saldo acreedor suele indicar una imputación anómala.",
+        "asiento_sin_lineas": "Revisar el origen del asiento. No tiene lÃ­neas contables y normalmente debe eliminarse o reconstruirse.",
+        "asiento_descuadrado": "Revisar las lÃ­neas del asiento y corregir importes o movimientos hasta que Debe y Haber cuadren.",
+        "importe_absurdo": "Revisar el concepto y el importe detectado. Puede haberse tomado un telÃ©fono, DNI o referencia como importe.",
+        "cliente_saldo_acreedor": "Revisar cobros, abonos o facturas del cliente. Un cliente con saldo acreedor suele indicar una imputaciÃ³n anÃ³mala.",
         "proveedor_saldo_deudor": "Revisar pagos, anticipos o facturas del proveedor. Un proveedor con saldo deudor puede estar mal contabilizado.",
-        "caja_negativa": "Revisar pagos en efectivo y faltantes de registro. La caja no debería quedar en negativo.",
+        "caja_negativa": "Revisar pagos en efectivo y faltantes de registro. La caja no deberÃ­a quedar en negativo.",
         "bancos_negativos": "Revisar movimientos bancarios, pagos duplicados o conciliaciones incorrectas.",
-        "devolucion_sin_fianza_previa": "Comprobar si falta crear la fianza original o si la devolución se ha contabilizado sobre un asiento incorrecto.",
-        "fianza_abierta": "Comprobar si la fianza sigue vigente o si falta registrar su devolución.",
+        "devolucion_sin_fianza_previa": "Comprobar si falta crear la fianza original o si la devoluciÃ³n se ha contabilizado sobre un asiento incorrecto.",
+        "fianza_abierta": "Comprobar si la fianza sigue vigente o si falta registrar su devoluciÃ³n.",
     }
 
     return mapa.get(
@@ -3484,10 +3515,10 @@ def pantalla_apertura_pdf():
                 str(fecha_apertura)
             )
 
-            st.subheader("Validación")
+            st.subheader("ValidaciÃ³n")
             st.write(resultado["validacion"])
 
-            st.subheader("Líneas del asiento")
+            st.subheader("LÃ­neas del asiento")
             for linea in resultado["lineas"]:
                 st.write(linea)
 
@@ -3509,10 +3540,10 @@ def pantalla_apertura_pdf():
                 st.error("El asiento no cuadra, revisa los datos")
 
         if "detalle" in resultado_pdf:
-            st.subheader("Validación ampliada")
+            st.subheader("ValidaciÃ³n ampliada")
             st.write(resultado_pdf["detalle"]["validacion"])
 
-            st.subheader("Líneas generadas")
+            st.subheader("LÃ­neas generadas")
             for linea in resultado_pdf["detalle"]["lineas"]:
                 st.write(linea)
 
@@ -3521,9 +3552,9 @@ def pantalla_apertura_pdf():
 
 def formatear_importe_seguro(valor):
     try:
-        return f"{float(valor or 0):,.2f} €".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{float(valor or 0):,.2f} â‚¬".replace(",", "X").replace(".", ",").replace("X", ".")
     except:
-        return "0,00 €"
+        return "0,00 â‚¬"
 
 
 def estado_factura_visual(estado, fecha_vencimiento=None):
@@ -3723,7 +3754,7 @@ def generar_html_ficha_factura(factura):
             </table>
 
             <div class="footer">
-                Documento generado desde la aplicación.
+                Documento generado desde la aplicaciÃ³n.
             </div>
         </div>
     </body>
@@ -3734,7 +3765,7 @@ def generar_html_ficha_factura(factura):
 def pantalla_facturas(cursor):
     st.markdown("""
         <div class="subnav-shell">
-            <div class="subnav-title">Facturación</div>
+            <div class="subnav-title">FacturaciÃ³n</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -3839,14 +3870,14 @@ def pantalla_facturas(cursor):
 
     with col_f3:
         filtro_texto = st.text_input(
-            "Buscar por número, tercero, concepto o referencia",
+            "Buscar por nÃºmero, tercero, concepto o referencia",
             key="facturas_filtro_texto"
         )
 
     with col_f4:
         ordenar_por = st.selectbox(
             "Orden",
-            ["Más recientes", "Más antiguas", "Mayor importe", "Menor importe"],
+            ["MÃ¡s recientes", "MÃ¡s antiguas", "Mayor importe", "Menor importe"],
             key="facturas_orden_visual"
         )
 
@@ -3889,12 +3920,12 @@ def pantalla_facturas(cursor):
         st.warning("No hay facturas que coincidan con los filtros.")
         return
 
-    if ordenar_por == "Más recientes":
+    if ordenar_por == "MÃ¡s recientes":
         facturas_filtradas.sort(
             key=lambda x: str(x.get("fecha") or x.get("fecha_emision") or ""),
             reverse=True
         )
-    elif ordenar_por == "Más antiguas":
+    elif ordenar_por == "MÃ¡s antiguas":
         facturas_filtradas.sort(
             key=lambda x: str(x.get("fecha") or x.get("fecha_emision") or ""),
             reverse=False
@@ -3913,7 +3944,7 @@ def pantalla_facturas(cursor):
     df_grid = pd.DataFrame([
         {
             "ID": f.get("id"),
-            "Número": f.get("numero_factura") or f.get("numero") or f"Factura #{f.get('id')}",
+            "NÃºmero": f.get("numero_factura") or f.get("numero") or f"Factura #{f.get('id')}",
             "Tipo": str(f.get("tipo") or f.get("tipo_factura") or "").strip().lower(),
             "Tercero": f.get("nombre_tercero") or f.get("cliente") or f.get("proveedor") or f.get("tercero") or "Sin tercero",
             "Fecha": f.get("fecha") or f.get("fecha_emision") or "",
@@ -3943,7 +3974,7 @@ def pantalla_facturas(cursor):
     )
 
     gb.configure_column("ID", width=90)
-    gb.configure_column("Número", width=180)
+    gb.configure_column("NÃºmero", width=180)
     gb.configure_column("Tipo", width=110)
     gb.configure_column("Tercero", width=220)
     gb.configure_column("Fecha", width=120)
@@ -4105,7 +4136,7 @@ def pantalla_facturas(cursor):
                     else:
                         st.error(resultado_cobro.get("mensaje"))
         else:
-            st.success("Esta factura ya está cobrada/pagada.")
+            st.success("Esta factura ya estÃ¡ cobrada/pagada.")
 
     with col_b:
         html_factura = generar_html_ficha_factura(factura)
@@ -4135,15 +4166,15 @@ def pantalla_nueva_factura_venta(cursor):
 
         with col1:
             nombre_cliente = st.text_input("Cliente", key="fv_nombre_cliente")
-            fecha_emision = st.date_input("Fecha emisión", key="fv_fecha_emision")
+            fecha_emision = st.date_input("Fecha emisiÃ³n", key="fv_fecha_emision")
             concepto = st.text_area("Concepto", key="fv_concepto")
 
         with col2:
-            numero_factura = st.text_input("Número factura", value=numero_sugerido, key="fv_numero_factura")
+            numero_factura = st.text_input("NÃºmero factura", value=numero_sugerido, key="fv_numero_factura")
             fecha_vencimiento = st.date_input("Fecha vencimiento", key="fv_fecha_vencimiento")
             forma_pago = st.selectbox(
                 "Forma de pago",
-                ["TRANSFERENCIA", "EFECTIVO", "TARJETA", "BIZUM", "DOMICILIACIÓN", "OTRO"],
+                ["TRANSFERENCIA", "EFECTIVO", "TARJETA", "BIZUM", "DOMICILIACIÃ“N", "OTRO"],
                 key="fv_forma_pago"
             )
 
@@ -4224,14 +4255,14 @@ def pantalla_nueva_factura_venta(cursor):
                     f"Factura creada y cobrada correctamente. "
                     f"Factura ID {resultado['factura_id']} | "
                     f"Asiento factura ID {resultado['asiento_id']} | "
-                    f"Total {resultado['total']:.2f} €"
+                    f"Total {resultado['total']:.2f} â‚¬"
                 )
             else:
                 st.success(
                     f"Factura creada correctamente. "
                     f"Factura ID {resultado['factura_id']} | "
                     f"Asiento ID {resultado['asiento_id']} | "
-                    f"Total {resultado['total']:.2f} €"
+                    f"Total {resultado['total']:.2f} â‚¬"
                 )
 
             st.session_state["factura_seleccionada_id"] = resultado["factura_id"]
@@ -4251,7 +4282,7 @@ def pantalla_nueva_factura_venta(cursor):
                     )
                     estado_factura_visual_tmp = "pagada"
                 else:
-                    st.error(f"La factura se creó, pero no se pudo registrar el cobro: {resultado_cobro.get('mensaje')}")
+                    st.error(f"La factura se creÃ³, pero no se pudo registrar el cobro: {resultado_cobro.get('mensaje')}")
 
             st.session_state["ultima_factura_venta_creada"] = {
                 "id": resultado["factura_id"],
@@ -4392,9 +4423,9 @@ def pantalla_clientes(cursor):
     with tab2:
         nombre = st.text_input("Nombre cliente", key="alta_cliente_nombre")
         nif = st.text_input("NIF", key="alta_cliente_nif")
-        direccion = st.text_input("Dirección", key="alta_cliente_direccion")
+        direccion = st.text_input("DirecciÃ³n", key="alta_cliente_direccion")
         email = st.text_input("Email", key="alta_cliente_email")
-        telefono = st.text_input("Teléfono", key="alta_cliente_telefono")
+        telefono = st.text_input("TelÃ©fono", key="alta_cliente_telefono")
 
         if st.button("Crear cliente", key="crear_cliente_btn"):
             resultado = crear_tercero(
@@ -4424,9 +4455,9 @@ def pantalla_clientes(cursor):
 
             nombre = st.text_input("Nombre", value=tercero["nombre"], key="edit_cliente_nombre")
             nif = st.text_input("NIF", value=tercero["nif"], key="edit_cliente_nif")
-            direccion = st.text_input("Dirección", value=tercero["direccion"], key="edit_cliente_direccion")
+            direccion = st.text_input("DirecciÃ³n", value=tercero["direccion"], key="edit_cliente_direccion")
             email = st.text_input("Email", value=tercero["email"], key="edit_cliente_email")
-            telefono = st.text_input("Teléfono", value=tercero["telefono"], key="edit_cliente_telefono")
+            telefono = st.text_input("TelÃ©fono", value=tercero["telefono"], key="edit_cliente_telefono")
 
             c1, c2 = st.columns(2)
 
@@ -4459,7 +4490,7 @@ def pantalla_clientes(cursor):
                     cc1, cc2 = st.columns(2)
 
                     with cc1:
-                        if st.button("Sí, borrar", key="confirmar_borrar_cliente_si"):
+                        if st.button("SÃ­, borrar", key="confirmar_borrar_cliente_si"):
                             resultado = borrar_tercero("cliente", cliente_id)
                             st.session_state["confirmar_borrar_cliente"] = False
                             if resultado["ok"]:
@@ -4488,9 +4519,9 @@ def pantalla_clientes(cursor):
 
                 st.write(f"**Nombre:** {tercero['nombre']}")
                 st.write(f"**NIF:** {tercero['nif']}")
-                st.write(f"**Dirección:** {tercero['direccion']}")
+                st.write(f"**DirecciÃ³n:** {tercero['direccion']}")
                 st.write(f"**Email:** {tercero['email']}")
-                st.write(f"**Teléfono:** {tercero['telefono']}")
+                st.write(f"**TelÃ©fono:** {tercero['telefono']}")
                 st.markdown("### Scoring del cliente")
 
                 if st.button("Recalcular scoring", key=f"recalcular_scoring_cliente_{cliente_id}"):
@@ -4504,19 +4535,19 @@ def pantalla_clientes(cursor):
                     decision = str(resultado_scoring["decision"]).lower()
 
                     if color == "verde":
-                        icono = "🟢"
+                        icono = "ðŸŸ¢"
                         titulo_estado = "Cliente sano"
                     elif color == "amarillo":
-                        icono = "🟡"
-                        titulo_estado = "Cliente con atención"
+                        icono = "ðŸŸ¡"
+                        titulo_estado = "Cliente con atenciÃ³n"
                     else:
-                        icono = "🔴"
+                        icono = "ðŸ”´"
                         titulo_estado = "Cliente de riesgo"
 
                     if decision == "trabajar":
                         decision_txt = "Trabajar"
                     elif decision == "trabajar_con_limites":
-                        decision_txt = "Trabajar con límites"
+                        decision_txt = "Trabajar con lÃ­mites"
                     else:
                         decision_txt = "Revisar o bloquear"
 
@@ -4527,7 +4558,7 @@ def pantalla_clientes(cursor):
                     else:
                         st.error(f"{icono} {titulo_estado}")
 
-                    st.write(f"**Decisión recomendada:** {decision_txt}")
+                    st.write(f"**DecisiÃ³n recomendada:** {decision_txt}")
                     st.info(resultado_scoring["motivo"])
 
                     col_sc1, col_sc2, col_sc3 = st.columns(3)
@@ -4536,10 +4567,10 @@ def pantalla_clientes(cursor):
                         st.metric("Scoring", resultado_scoring["puntuacion"])
 
                     with col_sc2:
-                        st.metric("Semáforo", resultado_scoring["color"].capitalize())
+                        st.metric("SemÃ¡foro", resultado_scoring["color"].capitalize())
 
                     with col_sc3:
-                        st.metric("Decisión", decision_txt)
+                        st.metric("DecisiÃ³n", decision_txt)
 
                     col_sc4, col_sc5, col_sc6 = st.columns(3)
 
@@ -4547,10 +4578,10 @@ def pantalla_clientes(cursor):
                         st.metric("Facturas pendientes", resultado_scoring["pendientes"])
 
                     with col_sc5:
-                        st.metric("Saldo pendiente", f"{resultado_scoring['saldo_pendiente']:.2f} €")
+                        st.metric("Saldo pendiente", f"{resultado_scoring['saldo_pendiente']:.2f} â‚¬")
 
                     with col_sc6:
-                        st.metric("Días de deuda", resultado_scoring["dias_deuda"])
+                        st.metric("DÃ­as de deuda", resultado_scoring["dias_deuda"])
 
                 col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
@@ -4558,17 +4589,17 @@ def pantalla_clientes(cursor):
                 with col2:
                     st.metric("Operaciones", ficha["total_operaciones"])
                 with col3:
-                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} €")
+                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} â‚¬")
                 with col4:
-                    st.metric("Cobrado", f"{ficha['volumen_cerrado']:.2f} €")
+                    st.metric("Cobrado", f"{ficha['volumen_cerrado']:.2f} â‚¬")
                 with col5:
-                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} €")
+                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} â‚¬")
 
                 st.write(f"**Forma de pago habitual:** {ficha['forma_pago_habitual'] or '-'}")
 
-                st.subheader("Últimas facturas")
+                st.subheader("Ãšltimas facturas")
                 st.dataframe(ficha["facturas"], use_container_width=True)
-                st.subheader("Últimas operaciones")
+                st.subheader("Ãšltimas operaciones")
                 st.dataframe(ficha["operaciones"], use_container_width=True)
 
 def pantalla_proveedores(cursor):
@@ -4586,9 +4617,9 @@ def pantalla_proveedores(cursor):
     with tab2:
         nombre = st.text_input("Nombre proveedor", key="alta_proveedor_nombre")
         nif = st.text_input("NIF", key="alta_proveedor_nif")
-        direccion = st.text_input("Dirección", key="alta_proveedor_direccion")
+        direccion = st.text_input("DirecciÃ³n", key="alta_proveedor_direccion")
         email = st.text_input("Email", key="alta_proveedor_email")
-        telefono = st.text_input("Teléfono", key="alta_proveedor_telefono")
+        telefono = st.text_input("TelÃ©fono", key="alta_proveedor_telefono")
 
         if st.button("Crear proveedor", key="crear_proveedor_btn"):
             resultado = crear_tercero(
@@ -4618,9 +4649,9 @@ def pantalla_proveedores(cursor):
 
             nombre = st.text_input("Nombre", value=tercero["nombre"], key="edit_proveedor_nombre")
             nif = st.text_input("NIF", value=tercero["nif"], key="edit_proveedor_nif")
-            direccion = st.text_input("Dirección", value=tercero["direccion"], key="edit_proveedor_direccion")
+            direccion = st.text_input("DirecciÃ³n", value=tercero["direccion"], key="edit_proveedor_direccion")
             email = st.text_input("Email", value=tercero["email"], key="edit_proveedor_email")
-            telefono = st.text_input("Teléfono", value=tercero["telefono"], key="edit_proveedor_telefono")
+            telefono = st.text_input("TelÃ©fono", value=tercero["telefono"], key="edit_proveedor_telefono")
 
             c1, c2 = st.columns(2)
 
@@ -4654,7 +4685,7 @@ def pantalla_proveedores(cursor):
                     cc1, cc2 = st.columns(2)
 
                     with cc1:
-                        if st.button("Sí, borrar", key="confirmar_borrar_proveedor_si"):
+                        if st.button("SÃ­, borrar", key="confirmar_borrar_proveedor_si"):
                             resultado = borrar_tercero("proveedor", proveedor_id)
                             st.session_state["confirmar_borrar_proveedor"] = False
                             if resultado["ok"]:
@@ -4683,9 +4714,9 @@ def pantalla_proveedores(cursor):
 
                 st.write(f"**Nombre:** {tercero['nombre']}")
                 st.write(f"**NIF:** {tercero['nif']}")
-                st.write(f"**Dirección:** {tercero['direccion']}")
+                st.write(f"**DirecciÃ³n:** {tercero['direccion']}")
                 st.write(f"**Email:** {tercero['email']}")
-                st.write(f"**Teléfono:** {tercero['telefono']}")
+                st.write(f"**TelÃ©fono:** {tercero['telefono']}")
 
                 col1, col2, col3, col4, col5 = st.columns(5)
                 with col1:
@@ -4693,17 +4724,17 @@ def pantalla_proveedores(cursor):
                 with col2:
                     st.metric("Operaciones", ficha["total_operaciones"])
                 with col3:
-                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} €")
+                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} â‚¬")
                 with col4:
-                    st.metric("Pagado", f"{ficha['volumen_cerrado']:.2f} €")
+                    st.metric("Pagado", f"{ficha['volumen_cerrado']:.2f} â‚¬")
                 with col5:
-                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} €")
+                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} â‚¬")
 
                 st.write(f"**Forma de pago habitual:** {ficha['forma_pago_habitual'] or '-'}")
 
-                st.subheader("Últimas facturas")
+                st.subheader("Ãšltimas facturas")
                 st.dataframe(ficha["facturas"], use_container_width=True)
-                st.subheader("Últimas operaciones")
+                st.subheader("Ãšltimas operaciones")
                 st.dataframe(ficha["operaciones"], use_container_width=True)
 
 def pantalla_importar_excel():
@@ -4728,11 +4759,11 @@ def pantalla_importar_excel():
                 st.session_state.confirmar_importacion_movimientos = True
 
             if st.session_state.confirmar_importacion_movimientos:
-                st.warning("¿Estás seguro de que quieres convertir estos movimientos en asientos contables?")
+                st.warning("Â¿EstÃ¡s seguro de que quieres convertir estos movimientos en asientos contables?")
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    if st.button("Sí, importar movimientos"):
+                    if st.button("SÃ­, importar movimientos"):
                         archivo_bytes = st.session_state["archivo_excel"].getvalue()
                         resultado = importar_movimientos_desde_excel(
                             df,
@@ -4742,13 +4773,15 @@ def pantalla_importar_excel():
 
                         if resultado == "duplicado":
                             st.warning("Este archivo ya fue importado anteriormente")
+                        elif isinstance(resultado, str) and resultado.startswith("error"):
+                            st.error(resultado)
                         else:
                             st.success("Movimientos importados correctamente a la contabilidad")
 
                         st.session_state.confirmar_importacion_movimientos = False
 
                 with col2:
-                    if st.button("Cancelar importación movimientos"):
+                    if st.button("Cancelar importaciÃ³n movimientos"):
                         st.session_state.confirmar_importacion_movimientos = False
 
         elif tipo_excel == "asientos":
@@ -4763,11 +4796,11 @@ def pantalla_importar_excel():
                 st.session_state.confirmar_importacion = True
 
             if st.session_state.confirmar_importacion:
-                st.warning("¿Estás seguro de que quieres importar este Excel a la contabilidad?")
+                st.warning("Â¿EstÃ¡s seguro de que quieres importar este Excel a la contabilidad?")
                 col1, col2 = st.columns(2)
 
                 with col1:
-                    if st.button("Sí, importar"):
+                    if st.button("SÃ­, importar"):
                         archivo_bytes = st.session_state["archivo_excel"].getvalue()
                         resultado = importar_asientos_desde_excel(
                             df,
@@ -4781,7 +4814,7 @@ def pantalla_importar_excel():
                             faltantes = resultado.get("detalle", [])
                             st.error(f"Faltan columnas obligatorias: {', '.join(faltantes)}")
                         elif isinstance(resultado, dict) and resultado.get("estado") == "sin_lineas":
-                            st.error("El Excel no contiene líneas válidas para formar asientos")
+                            st.error("El Excel no contiene lÃ­neas vÃ¡lidas para formar asientos")
                         elif isinstance(resultado, dict) and not resultado.get("ok", False):
 
                             st.error("Error al importar asientos")
@@ -4814,24 +4847,24 @@ def pantalla_importar_excel():
             opciones_auto = inferir_opciones_importacion(df, mapeo_sugerido)
 
             st.info(
-                f"Importación automática preparada. "
+                f"ImportaciÃ³n automÃ¡tica preparada. "
                 f"Tipo de tercero detectado: {opciones_auto['tipo_tercero']}. "
-                f"Se crearán terceros, asientos y vencimientos si procede."
+                f"Se crearÃ¡n terceros, asientos y vencimientos si procede."
             )
 
             if "confirmar_importacion_facturas" not in st.session_state:
                 st.session_state.confirmar_importacion_facturas = False
 
-            if st.button("Importar automáticamente"):
+            if st.button("Importar automÃ¡ticamente"):
                 st.session_state.confirmar_importacion_facturas = True
 
             if st.session_state.confirmar_importacion_facturas:
-                st.warning("¿Estás seguro de que quieres importar este documento?")
+                st.warning("Â¿EstÃ¡s seguro de que quieres importar este documento?")
 
                 c1, c2 = st.columns(2)
 
                 with c1:
-                    if st.button("Sí, importar facturas"):
+                    if st.button("SÃ­, importar facturas"):
                         archivo_bytes = st.session_state["archivo_excel"].getvalue()
 
                         resultado = importar_documento_facturas(
@@ -4859,7 +4892,7 @@ def pantalla_importar_excel():
                             )
 
                 with c2:
-                    if st.button("Cancelar importación facturas"):
+                    if st.button("Cancelar importaciÃ³n facturas"):
                         st.session_state.confirmar_importacion_facturas = False
 
             resultado_facturas = st.session_state.get("ultimo_resultado_importacion_facturas")
@@ -4895,7 +4928,7 @@ def pantalla_importar_excel():
                             st.write(row.get("error"))
 
                         with col5:
-                            if st.button("🔧", key=f"editar_error_factura_{i}"):
+                            if st.button("ðŸ”§", key=f"editar_error_factura_{i}"):
                                 st.session_state["error_en_edicion_factura"] = dict(row)
                                 st.rerun()
 
@@ -4906,7 +4939,7 @@ def pantalla_importar_excel():
                 st.divider()
 
                 with st.container():
-                    st.markdown("### 🛠️ Resolución de incidencia")
+                    st.markdown("### ðŸ› ï¸ ResoluciÃ³n de incidencia")
 
                     col1, col2, col3, col4 = st.columns(4)
 
@@ -4925,7 +4958,7 @@ def pantalla_importar_excel():
                     st.divider()
 
                     accion = st.radio(
-                        "¿Qué quieres hacer con esta incidencia?",
+                        "Â¿QuÃ© quieres hacer con esta incidencia?",
                         [
                             "Corregir total",
                             "Importar como abono",
@@ -4946,7 +4979,7 @@ def pantalla_importar_excel():
                             key="edit_total_factura"
                         )
 
-                        if st.button("✅ Reintentar con total corregido", key="btn_reintentar_total_factura"):
+                        if st.button("âœ… Reintentar con total corregido", key="btn_reintentar_total_factura"):
 
                             try:
                                 importar_linea_corregida(
@@ -4967,7 +5000,7 @@ def pantalla_importar_excel():
 
                     elif accion == "Importar como abono":
 
-                        st.info("Se importará como factura rectificativa o abono")
+                        st.info("Se importarÃ¡ como factura rectificativa o abono")
 
                         fila_excel_error = int(error.get("fila_excel"))
                         idx_df_error = fila_excel_error - 2
@@ -4986,7 +5019,7 @@ def pantalla_importar_excel():
                             step=0.01,
                             key="edit_total_abono_factura"
                         )
-                        if st.button("↩️ Importar como abono", key="btn_importar_abono_factura"):
+                        if st.button("â†©ï¸ Importar como abono", key="btn_importar_abono_factura"):
 
                             try:
                                 importar_linea_corregida(
@@ -5012,14 +5045,14 @@ def pantalla_importar_excel():
                             key="comentario_pendiente_factura"
                         )
 
-                        if st.button("🕒 Guardar para revisar después", key="btn_guardar_pendiente_factura"):
-                            st.info("Incidencia dejada pendiente para revisión manual.")
+                        if st.button("ðŸ•’ Guardar para revisar despuÃ©s", key="btn_guardar_pendiente_factura"):
+                            st.info("Incidencia dejada pendiente para revisiÃ³n manual.")
                             del st.session_state["error_en_edicion_factura"]
                             st.rerun()
 
                     elif accion == "Cancelar":
 
-                        if st.button("❌ Cancelar corrección", key="btn_cancelar_factura"):
+                        if st.button("âŒ Cancelar correcciÃ³n", key="btn_cancelar_factura"):
                             del st.session_state["error_en_edicion_factura"]
                             st.rerun()
 
@@ -5035,12 +5068,12 @@ def pantalla_importar_excel():
                 st.session_state["confirmar_importacion_pagos_proveedor"] = True
 
             if st.session_state["confirmar_importacion_pagos_proveedor"]:
-                st.warning("¿Estás seguro de que quieres importar este documento de pagos a proveedores?")
+                st.warning("Â¿EstÃ¡s seguro de que quieres importar este documento de pagos a proveedores?")
 
                 c1, c2 = st.columns(2)
 
                 with c1:
-                    if st.button("Sí, importar pagos a proveedores", key="btn_confirmar_importar_pagos_proveedor"):
+                    if st.button("SÃ­, importar pagos a proveedores", key="btn_confirmar_importar_pagos_proveedor"):
                         archivo_bytes = st.session_state["archivo_excel"].getvalue()
 
                         resultado = importar_pagos_proveedor_desde_excel(
@@ -5067,7 +5100,7 @@ def pantalla_importar_excel():
                                 st.dataframe(pd.DataFrame(resultado["errores"]), use_container_width=True)
 
                 with c2:
-                    if st.button("Cancelar importación pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
+                    if st.button("Cancelar importaciÃ³n pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
                         st.session_state["confirmar_importacion_pagos_proveedor"] = False
 
         elif tipo_excel == "__no_usar__pagos_proveedor_antiguo":
@@ -5097,7 +5130,7 @@ def pantalla_importar_excel():
                         st.write(row.get("error"))
 
                     with col5:
-                        if st.button("🔧", key=f"editar_error_{i}"):
+                        if st.button("ðŸ”§", key=f"editar_error_{i}"):
                             st.session_state["error_en_edicion"] = dict(row)
                             st.rerun()
 
@@ -5106,7 +5139,7 @@ def pantalla_importar_excel():
                 error = st.session_state["error_en_edicion"]
 
                 st.divider()
-                st.subheader("🛠️ Corregir incidencia")
+                st.subheader("ðŸ› ï¸ Corregir incidencia")
 
                 fila = error.get("fila_excel")
 
@@ -5117,7 +5150,7 @@ def pantalla_importar_excel():
                 )
 
                 nuevo_numero = st.text_input(
-                    "Número factura",
+                    "NÃºmero factura",
                     value=error.get("numero_factura", ""),
                     key="edit_numero"
                 )
@@ -5132,7 +5165,7 @@ def pantalla_importar_excel():
                 col_a, col_b = st.columns(2)
 
                 with col_a:
-                    if st.button("✅ Reintentar importación"):
+                    if st.button("âœ… Reintentar importaciÃ³n"):
 
                         try:
                             resultado_reintento = importar_linea_corregida(
@@ -5152,25 +5185,25 @@ def pantalla_importar_excel():
                             st.error(f"Error: {e}")
 
                 with col_b:
-                    if st.button("❌ Cancelar"):
+                    if st.button("âŒ Cancelar"):
                         del st.session_state["error_en_edicion"]
                         st.rerun()
 
                 with c2:
-                    if st.button("Cancelar importación pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
+                    if st.button("Cancelar importaciÃ³n pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
                         st.session_state["confirmar_importacion_pagos_proveedor"] = False
 
             st.divider()
             st.markdown("### Mantenimiento importaciones")
 
-            if st.button("🧹 Limpiar histórico de importaciones", key="btn_limpiar_historico_importaciones"):
+            if st.button("ðŸ§¹ Limpiar histÃ³rico de importaciones", key="btn_limpiar_historico_importaciones"):
                 resultado_limpieza = limpiar_historico_importaciones()
 
                 if resultado_limpieza.get("ok"):
-                    st.success(resultado_limpieza.get("mensaje", "Histórico limpiado correctamente"))
+                    st.success(resultado_limpieza.get("mensaje", "HistÃ³rico limpiado correctamente"))
                     st.rerun()
                 else:
-                    st.error(resultado_limpieza.get("mensaje", "No se pudo limpiar el histórico"))
+                    st.error(resultado_limpieza.get("mensaje", "No se pudo limpiar el histÃ³rico"))
 
 def pantalla_ver_importaciones(cursor):
     st.markdown('<div class="section-title">Importaciones registradas</div>', unsafe_allow_html=True)
@@ -5202,7 +5235,7 @@ def pantalla_ver_importaciones(cursor):
 
 
 def pantalla_conciliacion_bancaria():
-    st.markdown('<div class="section-title">Conciliación bancaria con IA</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">ConciliaciÃ³n bancaria con IA</div>', unsafe_allow_html=True)
 
     resumen = resumen_conciliacion()
 
@@ -5242,17 +5275,17 @@ def pantalla_conciliacion_bancaria():
         else:
             st.dataframe(df, use_container_width=True)
 
-        st.subheader("Auto-conciliación")
-        umbral = st.slider("Score mínimo", 0.50, 0.99, 0.85, 0.01)
+        st.subheader("Auto-conciliaciÃ³n")
+        umbral = st.slider("Score mÃ­nimo", 0.50, 0.99, 0.85, 0.01)
 
-        if st.button("Ejecutar auto-conciliación IA"):
+        if st.button("Ejecutar auto-conciliaciÃ³n IA"):
             resultado = auto_conciliar_por_ia(score_minimo=umbral)
             if resultado.empty:
-                st.info("No hubo conciliaciones automáticas")
+                st.info("No hubo conciliaciones automÃ¡ticas")
             else:
                 st.dataframe(resultado, use_container_width=True)
 
-        st.subheader("Conciliación manual avanzada")
+        st.subheader("ConciliaciÃ³n manual avanzada")
 
         df_mov = movimientos_pendientes()
         df_fac = facturas_pendientes()
@@ -5263,7 +5296,7 @@ def pantalla_conciliacion_bancaria():
             st.info("No hay facturas pendientes para conciliar.")
         else:
             opciones_mov = {
-                f"{int(row['id'])} | {row['fecha']} | {row['sentido']} | {float(row['importe']):.2f} € | {str(row['concepto'])[:80]}": int(row["id"])
+                f"{int(row['id'])} | {row['fecha']} | {row['sentido']} | {float(row['importe']):.2f} â‚¬ | {str(row['concepto'])[:80]}": int(row["id"])
                 for _, row in df_mov.iterrows()
             }
 
@@ -5279,7 +5312,7 @@ def pantalla_conciliacion_bancaria():
             importe_movimiento = float(fila_mov["importe"])
             sentido_movimiento = str(fila_mov["sentido"]).strip().lower()
 
-            st.write(f"**Importe movimiento:** {importe_movimiento:.2f} €")
+            st.write(f"**Importe movimiento:** {importe_movimiento:.2f} â‚¬")
             st.write(f"**Sentido:** {sentido_movimiento}")
             st.write(f"**Concepto:** {fila_mov['concepto']}")
 
@@ -5306,7 +5339,7 @@ def pantalla_conciliacion_bancaria():
                     axis=1
                 )
 
-                # Ordenamos por score y, en empate, por fecha más reciente
+                # Ordenamos por score y, en empate, por fecha mÃ¡s reciente
                 if "fecha_emision" in df_fac_filtrado.columns:
                     try:
                         df_fac_filtrado["fecha_emision_sort"] = pd.to_datetime(
@@ -5380,22 +5413,22 @@ def pantalla_conciliacion_bancaria():
                 c_man1, c_man2, c_man3 = st.columns(3)
 
                 with c_man1:
-                    st.metric("Importe movimiento", f"{importe_movimiento:.2f} €")
+                    st.metric("Importe movimiento", f"{importe_movimiento:.2f} â‚¬")
 
                 with c_man2:
-                    st.metric("Total aplicado", f"{total_aplicado:.2f} €")
+                    st.metric("Total aplicado", f"{total_aplicado:.2f} â‚¬")
 
                 with c_man3:
-                    st.metric("Diferencia", f"{diferencia:.2f} €")
+                    st.metric("Diferencia", f"{diferencia:.2f} â‚¬")
                 if abs(diferencia) < 0.01:
-                    st.success("La propuesta automática cuadra exactamente con el movimiento.")
+                    st.success("La propuesta automÃ¡tica cuadra exactamente con el movimiento.")
                 elif diferencia > 0:
-                    st.warning(f"Quedan {diferencia:.2f} € sin aplicar.")
+                    st.warning(f"Quedan {diferencia:.2f} â‚¬ sin aplicar.")
                 else:
-                    st.error(f"Se está aplicando {abs(diferencia):.2f} € de más.")
+                    st.error(f"Se estÃ¡ aplicando {abs(diferencia):.2f} â‚¬ de mÃ¡s.")
 
                 if seleccionadas.empty:
-                    st.info("Marca una o varias facturas para aplicar la conciliación.")
+                    st.info("Marca una o varias facturas para aplicar la conciliaciÃ³n.")
                 else:
                     facturas_importes = [
                         (int(row["Factura ID"]), float(row["Importe a aplicar"]))
@@ -5408,13 +5441,13 @@ def pantalla_conciliacion_bancaria():
                         col_acc1, col_acc2 = st.columns(2)
 
                         with col_acc1:
-                            if st.button("Aplicar conciliación manual avanzada", key="btn_conciliacion_manual_multiple"):
+                            if st.button("Aplicar conciliaciÃ³n manual avanzada", key="btn_conciliacion_manual_multiple"):
                                 try:
                                     aplicar_conciliacion(
                                         movimiento_id=movimiento_id,
                                         facturas_importes=facturas_importes
                                     )
-                                    st.success("Conciliación aplicada correctamente")
+                                    st.success("ConciliaciÃ³n aplicada correctamente")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(str(e))
@@ -5426,7 +5459,7 @@ def pantalla_conciliacion_bancaria():
                                         movimiento_id=movimiento_id,
                                         facturas_importes=facturas_importes
                                     )
-                                    st.success("Auto-conciliación aplicada correctamente")
+                                    st.success("Auto-conciliaciÃ³n aplicada correctamente")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(str(e))
@@ -5438,7 +5471,7 @@ def pantalla_conciliacion_bancaria():
                                         movimiento_id=movimiento_id,
                                         facturas_importes=facturas_importes
                                     )
-                                    st.success("Auto-conciliación aplicada correctamente")
+                                    st.success("Auto-conciliaciÃ³n aplicada correctamente")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(str(e))
@@ -5450,7 +5483,7 @@ def pantalla_conciliacion_bancaria():
                                         movimiento_id=movimiento_id,
                                         facturas_importes=facturas_importes
                                     )
-                                    st.success("Auto-conciliación aplicada correctamente")
+                                    st.success("Auto-conciliaciÃ³n aplicada correctamente")
                                     st.rerun()
                                 except Exception as e:
                                     st.error(str(e))
@@ -5463,7 +5496,7 @@ def pantalla_conciliacion_bancaria():
 
 
 def pantalla_automatizacion_pyme():
-    st.markdown('<div class="section-title">Automatización PYME</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">AutomatizaciÃ³n PYME</div>', unsafe_allow_html=True)
 
     df_acciones = acciones_sugeridas_pyme()
     st.subheader("Bandeja de acciones sugeridas")
@@ -5504,7 +5537,7 @@ def pantalla_automatizacion_pyme():
     with tab3:
         tipo_correo = st.selectbox(
             "Tipo de correo",
-            ["Recordatorio de cobro", "Envío de factura", "Correo a proveedor"]
+            ["Recordatorio de cobro", "EnvÃ­o de factura", "Correo a proveedor"]
         )
 
         nombre = st.text_input("Nombre del destinatario")
@@ -5515,7 +5548,7 @@ def pantalla_automatizacion_pyme():
         if st.button("Generar borrador de correo"):
             if tipo_correo == "Recordatorio de cobro":
                 asunto, cuerpo = generar_email_recordatorio_cobro(nombre, factura_id, importe, fecha)
-            elif tipo_correo == "Envío de factura":
+            elif tipo_correo == "EnvÃ­o de factura":
                 asunto, cuerpo = generar_email_envio_factura(nombre, factura_id, importe, fecha)
             else:
                 asunto, cuerpo = generar_email_proveedor(nombre, factura_id, importe, fecha)
@@ -5529,11 +5562,11 @@ def pantalla_automatizacion_pyme():
 
 
 def pantalla_registrar_operacion():
-    st.markdown('<div class="section-title">Registrar operación inteligente</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Registrar operaciÃ³n inteligente</div>', unsafe_allow_html=True)
 
     texto = st.text_area(
-        "Describe la operación",
-        placeholder="Ejemplo: Compra de mercadería a Paquito Perez SL al contado por 100 euros"
+        "Describe la operaciÃ³n",
+        placeholder="Ejemplo: Compra de mercaderÃ­a a Paquito Perez SL al contado por 100 euros"
     )
     fecha = st.text_input("Fecha (YYYY-MM-DD)", value=str(datetime.date.today()))
     igic_defecto = st.number_input(
@@ -5548,13 +5581,13 @@ def pantalla_registrar_operacion():
         st.session_state["confirmar_operacion_inteligente"] = False
 
     if not st.session_state["confirmar_operacion_inteligente"]:
-        if st.button("Procesar operación", key="boton_procesar_operacion"):
+        if st.button("Procesar operaciÃ³n", key="boton_procesar_operacion"):
             if texto and fecha:
                 st.session_state["confirmar_operacion_inteligente"] = True
             else:
                 st.warning("Debes introducir texto y fecha.")
     else:
-        st.warning("Confirma la operación antes de registrarla.")
+        st.warning("Confirma la operaciÃ³n antes de registrarla.")
 
         st.write(f"**Texto:** {texto}")
         st.write(f"**Fecha:** {fecha}")
@@ -5563,7 +5596,7 @@ def pantalla_registrar_operacion():
         col_conf_1, col_conf_2 = st.columns(2)
 
         with col_conf_1:
-            if st.button("Sí, registrar operación", key="confirmar_operacion_inteligente_si"):
+            if st.button("SÃ­, registrar operaciÃ³n", key="confirmar_operacion_inteligente_si"):
                 resultado = procesar_operacion_texto(texto, fecha, igic_defecto)
                 st.session_state["confirmar_operacion_inteligente"] = False
 
@@ -5573,15 +5606,15 @@ def pantalla_registrar_operacion():
                     if asiento_id is not None:
                         st.success(f"Asiento creado correctamente. ID: {asiento_id}")
                     else:
-                        st.success("Operación registrada correctamente")
+                        st.success("OperaciÃ³n registrada correctamente")
 
                     df_control = validar_sistema_completo()
 
                     if not df_control.empty:
-                        st.warning("⚠️ Se detectaron incidencias contables tras registrar la operación")
+                        st.warning("âš ï¸ Se detectaron incidencias contables tras registrar la operaciÃ³n")
                         st.dataframe(df_control, use_container_width=True)
                     else:
-                        st.success("Validación contable correcta: no se detectaron incidencias")
+                        st.success("ValidaciÃ³n contable correcta: no se detectaron incidencias")
 
                     st.subheader("Resumen detectado")
                     st.write(f"**Tipo:** {resultado.get('tipo', '-')}")
@@ -5591,22 +5624,22 @@ def pantalla_registrar_operacion():
                     evento = resultado.get("evento", {})
                     if evento:
                         st.write(f"**Familia detectada:** {evento.get('familia', '-')}")
-                        st.write(f"**Plazo (días):** {evento.get('plazo_dias', 0)}")
-                        st.write(f"**Genera vencimiento:** {'Sí' if evento.get('genera_vencimiento') else 'No'}")
+                        st.write(f"**Plazo (dÃ­as):** {evento.get('plazo_dias', 0)}")
+                        st.write(f"**Genera vencimiento:** {'SÃ­' if evento.get('genera_vencimiento') else 'No'}")
                         st.write(f"**Fecha vencimiento:** {evento.get('fecha_vencimiento') or '-'}")
-                        st.write(f"**Periodificable:** {'Sí' if evento.get('periodificable') else 'No'}")
+                        st.write(f"**Periodificable:** {'SÃ­' if evento.get('periodificable') else 'No'}")
 
                     if "base" in resultado:
-                        st.write(f"**Base:** {resultado['base']:.2f} €")
+                        st.write(f"**Base:** {resultado['base']:.2f} â‚¬")
 
                     if "igic_pct" in resultado and "igic" in resultado:
-                        st.write(f"**IGIC ({resultado['igic_pct']:.2f}%):** {resultado['igic']:.2f} €")
+                        st.write(f"**IGIC ({resultado['igic_pct']:.2f}%):** {resultado['igic']:.2f} â‚¬")
 
                     if "total" in resultado:
-                        st.write(f"**Total:** {resultado['total']:.2f} €")
+                        st.write(f"**Total:** {resultado['total']:.2f} â‚¬")
 
                     if "importe" in resultado:
-                        st.write(f"**Importe:** {resultado['importe']:.2f} €")
+                        st.write(f"**Importe:** {resultado['importe']:.2f} â‚¬")
 
                     if resultado.get("advertencias"):
                         for aviso in resultado["advertencias"]:
@@ -5629,7 +5662,7 @@ def pantalla_registrar_operacion():
         with col_conf_2:
             if st.button("Cancelar", key="confirmar_operacion_inteligente_no"):
                 st.session_state["confirmar_operacion_inteligente"] = False
-                st.info("Operación cancelada")
+                st.info("OperaciÃ³n cancelada")
 
 
 def pantalla_operaciones(cursor):
@@ -5643,12 +5676,12 @@ def pantalla_operaciones(cursor):
             df = pd.DataFrame(
                 ops,
                 columns=[
-                    "ID", "Empresa ID", "Tipo operación", "Fecha operación", "Concepto",
-                    "Nombre tercero", "Número factura", "Forma pago", "Base imponible",
+                    "ID", "Empresa ID", "Tipo operaciÃ³n", "Fecha operaciÃ³n", "Concepto",
+                    "Nombre tercero", "NÃºmero factura", "Forma pago", "Base imponible",
                     "Impuesto %", "Cuota impuesto", "Total", "Creado en"
                 ][:len(ops[0])] if ops else [
-                    "ID", "Empresa ID", "Tipo operación", "Fecha operación", "Concepto",
-                    "Nombre tercero", "Número factura", "Forma pago", "Base imponible",
+                    "ID", "Empresa ID", "Tipo operaciÃ³n", "Fecha operaciÃ³n", "Concepto",
+                    "Nombre tercero", "NÃºmero factura", "Forma pago", "Base imponible",
                     "Impuesto %", "Cuota impuesto", "Total", "Creado en"
                 ]
             )
@@ -5728,8 +5761,8 @@ def pantalla_vencimientos(cursor):
             st.session_state["filtro_vencimientos"] = "vencidos"
 
     with c3:
-        st.metric("Próximos 7 días", len(proximos))
-        if st.button("Ver próximos 7 días", key="btn_ver_proximos"):
+        st.metric("PrÃ³ximos 7 dÃ­as", len(proximos))
+        if st.button("Ver prÃ³ximos 7 dÃ­as", key="btn_ver_proximos"):
             st.session_state["filtro_vencimientos"] = "proximos"
 
     with c4:
@@ -5747,7 +5780,7 @@ def pantalla_vencimientos(cursor):
         st.subheader("Listado de vencimientos vencidos")
     elif filtro == "proximos":
         df_mostrar = proximos.copy()
-        st.subheader("Listado de vencimientos próximos 7 días")
+        st.subheader("Listado de vencimientos prÃ³ximos 7 dÃ­as")
     else:
         df_mostrar = df.copy()
         st.subheader("Listado completo de vencimientos")
@@ -5776,7 +5809,7 @@ def pantalla_vencimientos(cursor):
         return
 
     total_importe = df_mostrar["Importe"].fillna(0).astype(float).sum()
-    st.write(f"**Total importe listado:** {total_importe:,.2f} €")
+    st.write(f"**Total importe listado:** {total_importe:,.2f} â‚¬")
 
     df_mostrar = df_mostrar.sort_values(
         by=["Fecha vencimiento", "Nombre tercero", "ID"],
@@ -5788,7 +5821,7 @@ def pantalla_vencimientos(cursor):
     st.markdown("### Registrar pago / cobro desde vencimiento")
 
     opciones = {
-        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {row['Importe']:.2f} € | {row['Estado']}": int(row["ID"])
+        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {row['Importe']:.2f} â‚¬ | {row['Estado']}": int(row["ID"])
         for _, row in df_mostrar.iterrows()
         if str(row["Estado"]).strip().lower() in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]
     }
@@ -5840,7 +5873,7 @@ def pantalla_vencimientos(cursor):
         cc1, cc2 = st.columns(2)
 
         with cc1:
-            if st.button("Sí, registrar", key="btn_confirmar_registrar_vencimiento_si"):
+            if st.button("SÃ­, registrar", key="btn_confirmar_registrar_vencimiento_si"):
                 resultado = registrar_desde_vencimiento(
                     vencimiento_id=vencimiento_id,
                     fecha=fecha_pago,
@@ -5861,12 +5894,14 @@ def pantalla_vencimientos(cursor):
                 st.session_state["confirmar_operacion_vencimiento"] = False
 
 def pantalla_inmovilizado():
-    st.markdown('<div class="section-title">Gestión de inmovilizado</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Gestion de inmovilizado</div>', unsafe_allow_html=True)
 
-    tab1, tab2, tab3, tab4 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "Listado de bienes",
         "Alta de bien",
-        "Generar amortización",
+        "Rotacion maquinaria",
+        "Alquileres y costes",
+        "Generar amortizacion",
         "Historial"
     ])
 
@@ -5876,25 +5911,51 @@ def pantalla_inmovilizado():
             st.info("No hay bienes registrados.")
         else:
             st.dataframe(df, use_container_width=True)
+            opciones_bienes = {f"{row['id']} | {row['nombre']}": int(row["id"]) for _, row in df.iterrows()}
+            seleccion = st.selectbox("Selecciona una maquina para completar datos operativos", list(opciones_bienes.keys()), key="sel_maquina_operativa")
+            bien_id = opciones_bienes[seleccion]
+            fila = df[df["id"] == bien_id].iloc[0]
+
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                codigo = st.text_input("Codigo maquina", value=str(fila.get("codigo_maquina") or ""), key="maq_codigo")
+                categoria = st.text_input("Categoria", value=str(fila.get("categoria") or ""), key="maq_categoria")
+            with c2:
+                ubicacion = st.text_input("Ubicacion", value=str(fila.get("ubicacion") or ""), key="maq_ubicacion")
+                estados = ["disponible", "alquilada", "mantenimiento", "averiada", "baja"]
+                estado_actual = str(fila.get("estado_operativo") or "disponible")
+                estado_op = st.selectbox("Estado operativo", estados, index=estados.index(estado_actual) if estado_actual in estados else 0, key="maq_estado")
+            with c3:
+                valor_mercado = st.number_input("Valor mercado", min_value=0.0, step=100.0, value=float(fila.get("valor_mercado") or 0), key="maq_valor")
+                tarifa_dia = st.number_input("Tarifa dia alquiler", min_value=0.0, step=10.0, value=float(fila.get("tarifa_dia") or 0), key="maq_tarifa")
+
+            if st.button("Guardar datos operativos de maquina", key="guardar_datos_maquina"):
+                actualizado = actualizar_datos_maquinaria(
+                    bien_id=bien_id,
+                    codigo_maquina=codigo,
+                    categoria=categoria,
+                    ubicacion=ubicacion,
+                    estado_operativo=estado_op,
+                    valor_mercado=valor_mercado,
+                    tarifa_dia=tarifa_dia,
+                )
+                if actualizado:
+                    st.success("Datos de maquinaria guardados.")
+                    st.rerun()
+                else:
+                    st.warning("No se ha podido actualizar la maquina seleccionada.")
 
     with tab2:
         nombre = st.text_input("Nombre del bien")
         fecha_compra = st.date_input("Fecha de compra", datetime.date.today())
-        fecha_inicio = st.date_input("Inicio de amortización", datetime.date.today())
+        fecha_inicio = st.date_input("Inicio de amortizacion", datetime.date.today())
         coste = st.number_input("Coste", min_value=0.0, step=100.0)
         valor_residual = st.number_input("Valor residual", min_value=0.0, step=100.0)
-        vida_util = st.number_input("Vida útil (años)", min_value=1.0, step=1.0)
+        vida_util = st.number_input("Vida util (anios)", min_value=1.0, step=1.0)
 
         cuenta_inmovilizado = st.text_input("Cuenta inmovilizado", "213 Maquinaria")
-        cuenta_amort_acum = st.text_input(
-            "Cuenta amortización acumulada",
-            "2813 Amortización acumulada maquinaria"
-        )
-        cuenta_gasto = st.text_input(
-            "Cuenta gasto amortización",
-            "681 Amortización del inmovilizado material"
-        )
-
+        cuenta_amort_acum = st.text_input("Cuenta amortizacion acumulada", "2813 Amortizacion acumulada maquinaria")
+        cuenta_gasto = st.text_input("Cuenta gasto amortizacion", "681 Amortizacion del inmovilizado material")
         observaciones = st.text_area("Observaciones")
 
         if st.button("Crear bien"):
@@ -5916,15 +5977,68 @@ def pantalla_inmovilizado():
                 st.error(str(e))
 
     with tab3:
-        ejercicio = st.number_input(
-            "Ejercicio",
-            min_value=2000,
-            max_value=2100,
-            value=datetime.date.today().year
-        )
-        mes = st.selectbox("Mes", list(range(1, 13)))
+        fecha_desde = st.date_input("Fecha desde", datetime.date.today().replace(month=1, day=1), key="rot_fecha_desde")
+        fecha_hasta = st.date_input("Fecha hasta", datetime.date.today(), key="rot_fecha_hasta")
+        df_rot = listar_rotacion_maquinaria(str(fecha_desde), str(fecha_hasta))
 
-        if st.button("Generar amortización para todos los bienes"):
+        if df_rot.empty:
+            st.info("No hay maquinas activas para analizar.")
+        else:
+            dias_periodo = max((fecha_hasta - fecha_desde).days + 1, 1)
+            df_rot = df_rot.copy()
+            df_rot["rotacion_%"] = (df_rot["dias_alquilados"].fillna(0).astype(float) / dias_periodo * 100).round(2)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Maquinas", len(df_rot))
+            c2.metric("Dias alquilados", int(df_rot["dias_alquilados"].fillna(0).sum()))
+            c3.metric("Ingresos alquiler", f"{float(df_rot['ingresos'].fillna(0).sum()):,.2f} EUR")
+            c4.metric("Margen", f"{float(df_rot['margen'].fillna(0).sum()):,.2f} EUR")
+            st.dataframe(df_rot, use_container_width=True)
+
+    with tab4:
+        df_bienes = ver_inmovilizado(solo_activos=True)
+        if df_bienes.empty:
+            st.info("Primero crea algun bien de inmovilizado.")
+        else:
+            opciones_bienes = {f"{row['id']} | {row['nombre']}": int(row["id"]) for _, row in df_bienes.iterrows()}
+            sub1, sub2, sub3 = st.tabs(["Registrar alquiler", "Registrar coste", "Historial operativo"])
+
+            with sub1:
+                sel = st.selectbox("Maquina", list(opciones_bienes.keys()), key="alq_maquina")
+                cliente = st.text_input("Cliente", key="alq_cliente")
+                obra = st.text_input("Obra / destino", key="alq_obra")
+                fa = st.date_input("Fecha inicio", datetime.date.today(), key="alq_inicio")
+                ff = st.date_input("Fecha fin", datetime.date.today(), key="alq_fin")
+                dias = st.number_input("Dias alquilados", min_value=0, step=1, value=max((ff - fa).days + 1, 1), key="alq_dias")
+                importe = st.number_input("Importe alquiler", min_value=0.0, step=10.0, key="alq_importe")
+                estado = st.selectbox("Estado", ["abierto", "cerrado", "cancelado"], key="alq_estado")
+                obs = st.text_area("Observaciones", key="alq_obs")
+                if st.button("Guardar alquiler", key="guardar_alquiler_maquina"):
+                    alquiler_id = registrar_alquiler_maquinaria(opciones_bienes[sel], cliente, obra, str(fa), str(ff), dias, importe, estado, obs)
+                    st.success(f"Alquiler registrado (ID {alquiler_id}).")
+                    st.rerun()
+
+            with sub2:
+                sel_coste = st.selectbox("Maquina", list(opciones_bienes.keys()), key="coste_maquina")
+                fecha_coste = st.date_input("Fecha coste", datetime.date.today(), key="coste_fecha")
+                tipo_coste = st.selectbox("Tipo coste", ["mantenimiento", "reparacion", "seguro", "transporte", "otro"], key="coste_tipo")
+                importe_coste = st.number_input("Importe coste", min_value=0.0, step=10.0, key="coste_importe")
+                proveedor = st.text_input("Proveedor", key="coste_proveedor")
+                obs_coste = st.text_area("Observaciones", key="coste_obs")
+                if st.button("Guardar coste", key="guardar_coste_maquina"):
+                    coste_id = registrar_coste_maquinaria(opciones_bienes[sel_coste], str(fecha_coste), tipo_coste, importe_coste, proveedor, obs_coste)
+                    st.success(f"Coste registrado (ID {coste_id}).")
+                    st.rerun()
+
+            with sub3:
+                st.markdown("#### Alquileres")
+                st.dataframe(listar_alquileres_maquinaria(), use_container_width=True)
+                st.markdown("#### Costes")
+                st.dataframe(listar_costes_maquinaria(), use_container_width=True)
+
+    with tab5:
+        ejercicio = st.number_input("Ejercicio", min_value=2000, max_value=2100, value=datetime.date.today().year)
+        mes = st.selectbox("Mes", list(range(1, 13)))
+        if st.button("Generar amortizacion para todos los bienes"):
             try:
                 df = generar_amortizaciones_mes(ejercicio, mes)
                 st.success("Proceso terminado")
@@ -5932,7 +6046,7 @@ def pantalla_inmovilizado():
             except Exception as e:
                 st.error(str(e))
 
-    with tab4:
+    with tab6:
         df = historial_amortizaciones()
         if df.empty:
             st.info("No hay amortizaciones generadas.")
@@ -5940,20 +6054,205 @@ def pantalla_inmovilizado():
             st.dataframe(df, use_container_width=True)
 
 
+def pantalla_bancos_seguros():
+    inicializar_bancos_seguros()
+    st.markdown('<div class="section-title">Bancos, fondos y seguros</div>', unsafe_allow_html=True)
+
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Entidades",
+        "Saldos",
+        "Financiacion y circulante",
+        "Seguros",
+        "Movimientos bancarios"
+    ])
+
+    with tab1:
+        df = listar_entidades()
+        st.dataframe(df, use_container_width=True)
+        with st.form("form_entidad_financiera"):
+            c1, c2 = st.columns(2)
+            with c1:
+                nombre = st.text_input("Nombre entidad")
+                tipo = st.selectbox("Tipo", ["banco", "aseguradora", "fondo", "financiera", "otro"])
+                contacto = st.text_input("Contacto")
+            with c2:
+                telefono = st.text_input("Telefono")
+                email = st.text_input("Email")
+                observaciones = st.text_input("Observaciones")
+            if st.form_submit_button("Guardar entidad"):
+                if nombre.strip():
+                    entidad_id = crear_entidad(nombre, tipo, contacto, telefono, email, observaciones)
+                    st.success(f"Entidad guardada (ID {entidad_id}).")
+                    st.rerun()
+                else:
+                    st.warning("El nombre de la entidad es obligatorio.")
+
+    with tab2:
+        entidades = opciones_entidades()
+        if not entidades:
+            st.info("Primero crea una entidad financiera.")
+        else:
+            st.dataframe(listar_saldos(), use_container_width=True)
+            with st.form("form_saldo_entidad"):
+                entidad = st.selectbox("Entidad", list(entidades.keys()))
+                producto = st.text_input("Producto / cuenta")
+                iban = st.text_input("IBAN")
+                saldo = st.number_input("Saldo", step=100.0)
+                fecha_saldo = st.date_input("Fecha saldo", datetime.date.today())
+                observaciones = st.text_input("Observaciones", key="saldo_obs")
+                if st.form_submit_button("Guardar saldo"):
+                    saldo_id = registrar_saldo(entidades[entidad], producto, iban, saldo, str(fecha_saldo), observaciones)
+                    st.success(f"Saldo registrado (ID {saldo_id}).")
+                    st.rerun()
+
+    with tab3:
+        entidades = opciones_entidades()
+        st.dataframe(listar_productos_financieros(), use_container_width=True)
+        if not entidades:
+            st.info("Primero crea una entidad financiera.")
+        else:
+            with st.form("form_producto_financiero"):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    entidad = st.selectbox("Entidad", list(entidades.keys()), key="prod_entidad")
+                    tipo_producto = st.selectbox("Tipo producto", ["prestamo", "leasing", "renting", "poliza_credito", "confirming", "factoring", "tarjeta", "otro"])
+                    nombre = st.text_input("Nombre producto")
+                with c2:
+                    concedido = st.number_input("Importe concedido", min_value=0.0, step=100.0)
+                    dispuesto = st.number_input("Importe dispuesto", min_value=0.0, step=100.0)
+                    interes = st.number_input("Tipo interes (%)", min_value=0.0, step=0.1)
+                with c3:
+                    inicio = st.date_input("Fecha inicio", datetime.date.today(), key="prod_inicio")
+                    vencimiento = st.date_input("Fecha vencimiento", datetime.date.today(), key="prod_vto")
+                    cuota = st.number_input("Cuota", min_value=0.0, step=10.0)
+                estado = st.selectbox("Estado", ["vigente", "cancelado", "vencido", "en_estudio"], key="prod_estado")
+                observaciones = st.text_area("Observaciones", key="prod_obs")
+                if st.form_submit_button("Guardar producto"):
+                    producto_id = registrar_producto_financiero(entidades[entidad], tipo_producto, nombre, concedido, dispuesto, interes, str(inicio), str(vencimiento), cuota, estado, observaciones)
+                    st.success(f"Producto guardado (ID {producto_id}).")
+                    st.rerun()
+
+    with tab4:
+        entidades = opciones_entidades()
+        st.dataframe(listar_seguros(), use_container_width=True)
+        with st.form("form_seguro"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                entidad = st.selectbox("Entidad / aseguradora", ["Sin vincular"] + list(entidades.keys()), key="seg_entidad")
+                compania = st.text_input("Compania")
+                ramo = st.selectbox("Ramo", ["responsabilidad civil", "maquinaria", "vehiculos", "multirriesgo", "credito", "salud", "otro"])
+            with c2:
+                poliza = st.text_input("Poliza")
+                bien = st.text_input("Bien asegurado")
+                prima = st.number_input("Prima anual", min_value=0.0, step=10.0)
+            with c3:
+                inicio = st.date_input("Fecha inicio", datetime.date.today(), key="seg_inicio")
+                vencimiento = st.date_input("Fecha vencimiento", datetime.date.today(), key="seg_vto")
+                estado = st.selectbox("Estado", ["vigente", "vencido", "cancelado", "en_revision"], key="seg_estado")
+            observaciones = st.text_area("Observaciones", key="seg_obs")
+            if st.form_submit_button("Guardar seguro"):
+                entidad_id = entidades.get(entidad) if entidad != "Sin vincular" else None
+                seguro_id = registrar_seguro(entidad_id, compania, ramo, poliza, bien, prima, str(inicio), str(vencimiento), estado, observaciones)
+                st.success(f"Seguro guardado (ID {seguro_id}).")
+                st.rerun()
+
+    with tab5:
+        st.info("Aqui se revisan los movimientos bancarios importados. La importacion se hace desde Operaciones > Importar Excel.")
+        st.dataframe(listar_movimientos_bancarios(), use_container_width=True)
+
+
+def pantalla_laboral():
+    inicializar_laboral()
+    st.markdown('<div class="section-title">Trabajadores y nominas</div>', unsafe_allow_html=True)
+
+    tab1, tab2, tab3 = st.tabs(["Trabajadores", "Nominas", "Impuestos laborales"])
+
+    with tab1:
+        st.dataframe(listar_trabajadores(), use_container_width=True)
+        with st.form("form_trabajador"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                nombre = st.text_input("Nombre trabajador")
+                nif = st.text_input("NIF")
+                puesto = st.text_input("Puesto")
+            with c2:
+                tipo_contrato = st.selectbox("Tipo contrato", ["indefinido", "temporal", "fijo_discontinuo", "practicas", "otro"])
+                fecha_alta = st.date_input("Fecha alta", datetime.date.today())
+                fecha_baja = st.date_input("Fecha baja", datetime.date.today())
+            with c3:
+                bruto_anual = st.number_input("Salario bruto anual", min_value=0.0, step=100.0)
+                irpf = st.number_input("IRPF %", min_value=0.0, step=0.1)
+                ss_trab = st.number_input("SS trabajador mensual", min_value=0.0, step=10.0)
+                ss_emp = st.number_input("SS empresa mensual", min_value=0.0, step=10.0)
+            estado = st.selectbox("Estado", ["activo", "baja", "pendiente"], key="trab_estado")
+            observaciones = st.text_area("Observaciones", key="trab_obs")
+            if st.form_submit_button("Guardar trabajador"):
+                if nombre.strip():
+                    trabajador_id = crear_trabajador(nombre, nif, puesto, tipo_contrato, str(fecha_alta), str(fecha_baja), bruto_anual, irpf, ss_trab, ss_emp, estado, observaciones)
+                    st.success(f"Trabajador guardado (ID {trabajador_id}).")
+                    st.rerun()
+                else:
+                    st.warning("El nombre del trabajador es obligatorio.")
+
+    with tab2:
+        trabajadores = opciones_trabajadores()
+        st.dataframe(listar_nominas(), use_container_width=True)
+        if not trabajadores:
+            st.info("Primero crea un trabajador activo.")
+        else:
+            with st.form("form_nomina"):
+                trabajador = st.selectbox("Trabajador", list(trabajadores.keys()))
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    periodo = st.text_input("Periodo", value=datetime.date.today().strftime("%Y-%m"))
+                    fecha_pago = st.date_input("Fecha pago", datetime.date.today())
+                    bruto = st.number_input("Salario bruto", min_value=0.0, step=100.0)
+                with c2:
+                    irpf = st.number_input("IRPF", min_value=0.0, step=10.0, key="nom_irpf")
+                    ss_trab = st.number_input("SS trabajador", min_value=0.0, step=10.0, key="nom_ss_trab")
+                    ss_emp = st.number_input("SS empresa", min_value=0.0, step=10.0, key="nom_ss_emp")
+                with c3:
+                    estado = st.selectbox("Estado", ["pendiente", "pagada", "contabilizada"], key="nom_estado")
+                    st.metric("Neto estimado", f"{max(bruto - irpf - ss_trab, 0):,.2f} EUR")
+                    st.metric("Coste empresa", f"{bruto + ss_emp:,.2f} EUR")
+                observaciones = st.text_area("Observaciones", key="nom_obs")
+                if st.form_submit_button("Guardar nomina"):
+                    nomina_id = registrar_nomina(trabajadores[trabajador], periodo, str(fecha_pago), bruto, irpf, ss_trab, ss_emp, estado, observaciones)
+                    st.success(f"Nomina guardada (ID {nomina_id}).")
+                    st.rerun()
+
+    with tab3:
+        st.dataframe(listar_impuestos_laborales(), use_container_width=True)
+        with st.form("form_impuesto_laboral"):
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                periodo = st.text_input("Periodo", value=datetime.date.today().strftime("%Y-%m"), key="imp_periodo")
+                tipo = st.selectbox("Tipo", ["IRPF modelo 111", "Seguridad Social", "retenciones profesionales", "otro"], key="imp_tipo")
+            with c2:
+                importe = st.number_input("Importe", min_value=0.0, step=10.0, key="imp_importe")
+                vencimiento = st.date_input("Fecha vencimiento", datetime.date.today(), key="imp_vto")
+            with c3:
+                fecha_pago = st.date_input("Fecha pago", datetime.date.today(), key="imp_pago")
+                estado = st.selectbox("Estado", ["pendiente", "pagado", "presentado"], key="imp_estado")
+            observaciones = st.text_area("Observaciones", key="imp_obs")
+            if st.form_submit_button("Guardar impuesto laboral"):
+                impuesto_id = registrar_impuesto_laboral(periodo, tipo, importe, str(vencimiento), str(fecha_pago), estado, observaciones)
+                st.success(f"Impuesto laboral guardado (ID {impuesto_id}).")
+                st.rerun()
 # =========================================================
-# NAVEGACIÓN POR BLOQUES
+# NAVEGACIÃ“N POR BLOQUES
 # =========================================================
 
 def mostrar_bloque_inicio(cursor):
-    st.markdown("## 🏠 Panel principal")
+    st.markdown("## ðŸ  Panel principal")
 
-    # 1. Mantienes TODO lo que ya tenías
+    # 1. Mantienes TODO lo que ya tenÃ­as
     pantalla_panel_control()
 
     st.divider()
 
-    # 2. Añadimos una capa más profesional encima/sobre el resumen
-    st.markdown("## 📊 Resumen financiero ejecutivo")
+    # 2. AÃ±adimos una capa mÃ¡s profesional encima/sobre el resumen
+    st.markdown("## ðŸ“Š Resumen financiero ejecutivo")
 
     col1, col2 = st.columns([2, 1])
 
@@ -5963,18 +6262,18 @@ def mostrar_bloque_inicio(cursor):
 
     with col2:
         st.markdown("""
-        ### 🤖 Asistente IA
+        ### ðŸ¤– Asistente IA
         Tu sistema permite automatizar:
         - Asientos contables
         - Facturas
         - Clientes y proveedores
         - Balances
-        - Importación desde Excel
+        - ImportaciÃ³n desde Excel
         - Operaciones inteligentes
         """)
 
         st.markdown("""
-        ### ✅ Acciones recomendadas
+        ### âœ… Acciones recomendadas
         - Revisar incidencias
         - Conciliar bancos
         - Ver facturas pendientes
@@ -5983,7 +6282,7 @@ def mostrar_bloque_inicio(cursor):
 
     st.divider()
 
-    # 3. Aquí puedes dejar cualquier bloque extra que ya tuvieras debajo
+    # 3. AquÃ­ puedes dejar cualquier bloque extra que ya tuvieras debajo
     # Por ejemplo:
     # mostrar_modulos_destacados()
     # mostrar_alertas()
@@ -5995,10 +6294,10 @@ def mostrar_bloque_contabilidad(cursor):
         "Subbloque",
         [
             "Libro diario",
-            "Balance de comprobación",
+            "Balance de comprobaciÃ³n",
             "Libro mayor",
             "Cuenta de resultados",
-            "Balance de situación",
+            "Balance de situaciÃ³n",
             "Control contable",
             "Asiento de apertura",
             "Fianzas detectadas"
@@ -6008,13 +6307,13 @@ def mostrar_bloque_contabilidad(cursor):
 
     if seccion == "Libro diario":
         pantalla_libro_diario(cursor)
-    elif seccion == "Balance de comprobación":
+    elif seccion == "Balance de comprobaciÃ³n":
         pantalla_balance_comprobacion()
     elif seccion == "Libro mayor":
         pantalla_libro_mayor()
     elif seccion == "Cuenta de resultados":
         pantalla_cuenta_resultados()
-    elif seccion == "Balance de situación":
+    elif seccion == "Balance de situaciÃ³n":
         pantalla_balance_situacion()
     elif seccion == "Control contable":
         pantalla_control_contable()
@@ -6028,7 +6327,7 @@ def mostrar_bloque_contabilidad(cursor):
 
 
 def mostrar_bloque_facturacion(cursor):
-    st.markdown('<div class="block-chip">Facturación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-chip">FacturaciÃ³n</div>', unsafe_allow_html=True)
 
     seccion = st.radio(
         "Subbloque",
@@ -6049,21 +6348,21 @@ def mostrar_bloque_facturacion(cursor):
 
 
 def mostrar_bloque_operaciones(cursor):
-    st.markdown('<div class="block-chip">Operaciones e importación</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-chip">Operaciones e importaciÃ³n</div>', unsafe_allow_html=True)
     seccion = st.radio(
         "Subbloque",
         [
-            "Registrar operación",
+            "Registrar operaciÃ³n",
             "Operaciones",
             "Importar Excel",
             "Ver importaciones",
-            "Incidencias importación",
+            "Incidencias importaciÃ³n",
             "Fianzas detectadas"
         ],
         horizontal=True
     )
 
-    if seccion == "Registrar operación":
+    if seccion == "Registrar operaciÃ³n":
         pantalla_registrar_operacion()
     elif seccion == "Operaciones":
         pantalla_operaciones(cursor)
@@ -6071,23 +6370,23 @@ def mostrar_bloque_operaciones(cursor):
         pantalla_importar_excel()
     elif seccion == "Ver importaciones":
         pantalla_ver_importaciones(cursor)
-    elif seccion == "Incidencias importación":
+    elif seccion == "Incidencias importaciÃ³n":
         pantalla_incidencias_importacion()
     elif seccion == "Fianzas detectadas":
         pantalla_fianzas_detectadas(cursor)
 
 
 def mostrar_bloque_tesoreria():
-    st.markdown('<div class="block-chip">Tesorería y automatización</div>', unsafe_allow_html=True)
+    st.markdown('<div class="block-chip">TesorerÃ­a y automatizaciÃ³n</div>', unsafe_allow_html=True)
     seccion = st.radio(
         "Subbloque",
-        ["Conciliación bancaria IA", "Automatización PYME"],
+        ["ConciliaciÃ³n bancaria IA", "AutomatizaciÃ³n PYME"],
         horizontal=True
     )
 
-    if seccion == "Conciliación bancaria IA":
+    if seccion == "ConciliaciÃ³n bancaria IA":
         pantalla_conciliacion_bancaria()
-    elif seccion == "Automatización PYME":
+    elif seccion == "AutomatizaciÃ³n PYME":
         pantalla_automatizacion_pyme()
 
 
@@ -6102,7 +6401,7 @@ def mostrar_bloque_inmovilizado():
 
 def mostrar_app():
     if "usuario" not in st.session_state or "empresa_activa" not in st.session_state:
-      st.error("Sesión no iniciada correctamente")
+      st.error("SesiÃ³n no iniciada correctamente")
       st.stop()
     usuario = st.session_state["usuario"]
     empresa_activa = st.session_state["empresa_activa"]
@@ -6110,15 +6409,17 @@ def mostrar_app():
     with st.sidebar:
         mostrar_logo_efix(width=150, centrado=True)
         st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-        st.markdown("### Navegación")
+        st.markdown("### NavegaciÃ³n")
         bloque = st.radio(
             "Ir a",
             [
                 "Inicio",
                 "Contabilidad",
-                "Facturación",
+                "FacturaciÃ³n",
                 "Operaciones",
-                "Tesorería",
+                "TesorerÃ­a",
+                "Bancos y seguros",
+                "Trabajadores",
                 "Inmovilizado"
             ],
             label_visibility="collapsed"
@@ -6126,7 +6427,7 @@ def mostrar_app():
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)
-        st.markdown("#### Sesión")
+        st.markdown("#### SesiÃ³n")
         st.caption(f"Usuario: {usuario.get('username', '')}")
         st.caption(f"Empresa: {empresa_activa.get('nombre', '')}")
 
@@ -6135,7 +6436,7 @@ def mostrar_app():
                 st.session_state["fondo_inicio_canarias"] = obtener_imagen_canarias_local()
                 st.rerun()
 
-        if st.button("Cerrar sesión", use_container_width=True):
+        if st.button("Cerrar sesiÃ³n", use_container_width=True):
             logout()
 
         st.markdown('</div>', unsafe_allow_html=True)
@@ -6150,6 +6451,8 @@ def mostrar_app():
         inicializar_bd_empresa()
         migrar_bd_empresa()
         inicializar_tablas_conciliacion()
+        inicializar_bancos_seguros()
+        inicializar_laboral()
         st.session_state[empresa_runtime_key] = True
 
     # mostrar_cabecera_efix()
@@ -6166,12 +6469,16 @@ def mostrar_app():
             mostrar_bloque_inicio(cursor)
         elif bloque == "Contabilidad":
             mostrar_bloque_contabilidad(cursor)
-        elif bloque == "Facturación":
+        elif bloque == "FacturaciÃ³n":
             mostrar_bloque_facturacion(cursor)
         elif bloque == "Operaciones":
             mostrar_bloque_operaciones(cursor)
-        elif bloque == "Tesorería":
+        elif bloque == "TesorerÃ­a":
             mostrar_bloque_tesoreria()
+        elif bloque == "Bancos y seguros":
+            pantalla_bancos_seguros()
+        elif bloque == "Trabajadores":
+            pantalla_laboral()
         elif bloque == "Inmovilizado":
             mostrar_bloque_inmovilizado()
     finally:
@@ -6225,7 +6532,7 @@ def mostrar_cabecera_efix():
                 text-align:center;
                 width:100%;
             ">
-                👤 {usuario.get('username', '')} &nbsp;&nbsp;|&nbsp;&nbsp; 🏢 {empresa.get('nombre', '')}
+                ðŸ‘¤ {usuario.get('username', '')} &nbsp;&nbsp;|&nbsp;&nbsp; ðŸ¢ {empresa.get('nombre', '')}
             </div>
 
         </div>
@@ -6251,30 +6558,30 @@ def _sugerencia_basica_incidencia(detalle_error, datos):
     if "haber no puede ser negativo" in detalle:
         return "Sugerencia: mover el importe al DEBE en positivo."
 
-    if "fecha no válida" in detalle or "fecha vacía" in detalle:
+    if "fecha no vÃ¡lida" in detalle or "fecha vacÃ­a" in detalle:
         return "Sugerencia: corregir la fecha al formato YYYY-MM-DD."
 
     if "asiento descuadrado" in detalle:
-        return "Sugerencia: revisar el conjunto de líneas del asiento y comprobar debe/haber."
+        return "Sugerencia: revisar el conjunto de lÃ­neas del asiento y comprobar debe/haber."
 
-    if "importe vacío" in detalle:
+    if "importe vacÃ­o" in detalle:
         return "Sugerencia: completar el importe faltante."
 
-    if "importe no numérico" in detalle:
-        return "Sugerencia: limpiar símbolos o texto y dejar solo número."
+    if "importe no numÃ©rico" in detalle:
+        return "Sugerencia: limpiar sÃ­mbolos o texto y dejar solo nÃºmero."
 
-    if "fila sin líneas contables válidas" in detalle:
+    if "fila sin lÃ­neas contables vÃ¡lidas" in detalle:
         return "Sugerencia: revisar cuentas e importes de la fila original."
 
-    return "Sugerencia: revisar manualmente los datos originales y validar la corrección antes de aplicar."
+    return "Sugerencia: revisar manualmente los datos originales y validar la correcciÃ³n antes de aplicar."
 
 def pantalla_incidencias_importacion():
-    st.markdown('<div class="section-title">Revisión de incidencias de importación</div>', unsafe_allow_html=True)
-    st.caption("Corrige solo lo necesario, valida el asiento y deja preparada la resolución.")
+    st.markdown('<div class="section-title">RevisiÃ³n de incidencias de importaciÃ³n</div>', unsafe_allow_html=True)
+    st.caption("Corrige solo lo necesario, valida el asiento y deja preparada la resoluciÃ³n.")
     col_acc_1, col_acc_2 = st.columns([1, 3])
 
     with col_acc_1:
-        if st.button("🧹 Vaciar incidencias", key="vaciar_incidencias_importacion"):
+        if st.button("ðŸ§¹ Vaciar incidencias", key="vaciar_incidencias_importacion"):
             conn = get_connection()
             cursor = conn.cursor()
             try:
@@ -6301,7 +6608,7 @@ def pantalla_incidencias_importacion():
 
     with f_tipo:
         tipo = st.selectbox(
-            "Tipo de importación",
+            "Tipo de importaciÃ³n",
             ["todos", "asientos", "movimientos", "facturas", "pagos_proveedor"],
             index=0,
             key="inc_tipo_importacion"
@@ -6352,9 +6659,9 @@ def pantalla_incidencias_importacion():
         st.metric("Estado", str(fila["Estado"]))
 
     # =========================
-    # BLOQUE 2 - QUÉ HA PASADO
+    # BLOQUE 2 - QUÃ‰ HA PASADO
     # =========================
-    st.markdown("## 2) Qué ha pasado")
+    st.markdown("## 2) QuÃ© ha pasado")
 
     st.error(f"Error detectado: {fila['Detalle error']}")
     st.info(sugerencia)
@@ -6390,13 +6697,13 @@ def pantalla_incidencias_importacion():
         st.text_input("Cuenta haber original", value=cuenta_haber_original, disabled=True, key=f"orig_chaber_{incidencia_id}")
         st.number_input("Haber original", value=float(abs(haber_original)), step=0.01, disabled=True, key=f"orig_haber_{incidencia_id}")
 
-    with st.expander("Ver datos técnicos originales"):
+    with st.expander("Ver datos tÃ©cnicos originales"):
         st.json(datos)
 
     # =========================
-    # BLOQUE 4 - CORRECCIÓN
+    # BLOQUE 4 - CORRECCIÃ“N
     # =========================
-    st.markdown("## 4) Corrección propuesta")
+    st.markdown("## 4) CorrecciÃ³n propuesta")
 
     fecha_corregida = st.text_input("Fecha corregida", value=fecha_original, key=f"corr_fecha_{incidencia_id}")
     concepto_corregido = st.text_input("Concepto corregido", value=concepto_original, key=f"corr_concepto_{incidencia_id}")
@@ -6413,22 +6720,22 @@ def pantalla_incidencias_importacion():
         cuenta_haber = st.text_input("Cuenta haber", value=cuenta_haber_original, key=f"corr_cuenta_haber_{incidencia_id}")
         haber = st.number_input("Importe haber", min_value=0.0, step=0.01, value=float(abs(haber_original)), key=f"corr_haber_{incidencia_id}")
 
-    st.markdown("## 5) Validación rápida")
+    st.markdown("## 5) ValidaciÃ³n rÃ¡pida")
 
     diferencia = round(float(debe) - float(haber), 2)
 
     v1, v2, v3 = st.columns(3)
     with v1:
-        st.metric("Debe", f"{debe:.2f} €")
+        st.metric("Debe", f"{debe:.2f} â‚¬")
     with v2:
-        st.metric("Haber", f"{haber:.2f} €")
+        st.metric("Haber", f"{haber:.2f} â‚¬")
     with v3:
-        st.metric("Diferencia", f"{diferencia:.2f} €")
+        st.metric("Diferencia", f"{diferencia:.2f} â‚¬")
 
     if diferencia == 0 and cuenta_debe.strip() and cuenta_haber.strip():
-        st.success("La corrección propuesta está cuadrada y lista para aplicarse.")
+        st.success("La correcciÃ³n propuesta estÃ¡ cuadrada y lista para aplicarse.")
     else:
-        st.warning("La corrección todavía no está lista. Revisa cuentas e importes hasta que la diferencia sea 0,00 €.")
+        st.warning("La correcciÃ³n todavÃ­a no estÃ¡ lista. Revisa cuentas e importes hasta que la diferencia sea 0,00 â‚¬.")
 
     propuesta = {
         "fecha": fecha_corregida,
@@ -6478,7 +6785,7 @@ def pantalla_incidencias_importacion():
 
     with a3:
         if st.button(
-            "Aplicar corrección y volcar a contabilidad",
+            "Aplicar correcciÃ³n y volcar a contabilidad",
             key=f"aplicar_corr_{incidencia_id}"
         ):
             try:
@@ -6496,10 +6803,10 @@ def pantalla_incidencias_importacion():
                     )
                     st.rerun()
                 else:
-                    st.error(f"Error: {resultado.get('error', 'No se pudo aplicar la corrección.')}")
+                    st.error(f"Error: {resultado.get('error', 'No se pudo aplicar la correcciÃ³n.')}")
 
             except Exception as e:
-                st.error(f"No se pudo aplicar la corrección: {e}")
+                st.error(f"No se pudo aplicar la correcciÃ³n: {e}")
 
     with a4:
         if st.button("Borrar incidencia", key=f"del_{incidencia_id}"):
@@ -6532,3 +6839,5 @@ def borrar_estado_revision_fianza(asiento_origen_id):
 
     conn.commit()
     conn.close()
+
+

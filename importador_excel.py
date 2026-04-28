@@ -536,7 +536,7 @@ def _insertar_movimiento_banco_en_cursor(cursor, fecha, concepto, importe, saldo
     try:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS movimientos_banco (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             fecha TEXT,
             concepto TEXT,
             importe REAL,
@@ -555,7 +555,7 @@ def _insertar_movimiento_banco_en_cursor(cursor, fecha, concepto, importe, saldo
     INSERT INTO movimientos_banco (
         fecha, concepto, importe, sentido, saldo, referencia
     )
-    VALUES (?, ?, ?, ?, ?, ?)
+    VALUES (%s, %s, %s, %s, %s, %s)
     """, (
         fecha,
         concepto,
@@ -986,14 +986,15 @@ def importar_movimientos_desde_excel(df, nombre_archivo, archivo_bytes):
 
                 cursor.execute("""
                 INSERT INTO asientos (fecha, concepto, tipo_operacion)
-                VALUES (?, ?, ?)
+                VALUES (%s, %s, %s)
+                RETURNING id
                 """, (fecha, concepto, "movimiento_excel"))
 
-                asiento_id = cursor.lastrowid
+                asiento_id = cursor.fetchone()[0]
 
                 cursor.execute("""
                 INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                VALUES (?, ?)
+                VALUES (%s, %s)
                 """, (importacion_id, asiento_id))
 
                 if tipo == "ingreso":
@@ -1019,7 +1020,7 @@ def importar_movimientos_desde_excel(df, nombre_archivo, archivo_bytes):
                 for cuenta_linea, movimiento, importe_linea in lineas:
                     cursor.execute("""
                     INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                    VALUES (?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s)
                     """, (asiento_id, cuenta_linea, movimiento, float(importe_linea)))
 
                 importados += 1
