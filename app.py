@@ -1,10 +1,27 @@
 import streamlit as st
+import psycopg2
 from login_view import pantalla_login, pantalla_selector_empresa
 from app_visual import mostrar_app
 from auth_empresas import existe_algun_usuario
 from bootstrap_sistema import bootstrap_inicial
 
 from db_context import get_master_connection
+
+
+def pantalla_error_conexion(error):
+    st.error("No se pudo conectar con la base de datos en este momento.")
+    st.info(
+        "Esto suele pasar cuando Supabase tarda en despertar, el pool de conexiones esta saturado "
+        "o hay un corte temporal de red. Espera unos segundos y pulsa reintentar."
+    )
+
+    with st.expander("Detalle tecnico"):
+        st.code(str(error))
+
+    if st.button("Reintentar conexion"):
+        st.rerun()
+
+    st.stop()
 
 def crear_datos_demo():
     conn = get_master_connection()
@@ -63,6 +80,15 @@ st.set_page_config(
 # FUNCIÓN PRINCIPAL
 # ----------------------------
 def main():
+    try:
+        _main()
+    except psycopg2.OperationalError as e:
+        pantalla_error_conexion(e)
+    except TimeoutError as e:
+        pantalla_error_conexion(e)
+
+
+def _main():
 
     # ----------------------------
     # BOOTSTRAP INICIAL

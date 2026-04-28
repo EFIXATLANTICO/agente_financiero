@@ -2,6 +2,7 @@ import hashlib
 from db_context import ensure_dirs, get_master_connection
 
 MASTER_DB = "database/master.db"
+_MASTER_INICIALIZADO = False
 
 
 def hash_password(password: str) -> str:
@@ -9,6 +10,10 @@ def hash_password(password: str) -> str:
 
 
 def inicializar_master():
+    global _MASTER_INICIALIZADO
+    if _MASTER_INICIALIZADO:
+        return
+
     ensure_dirs()
     conn = get_master_connection()
     cur = conn.cursor()
@@ -58,6 +63,7 @@ def inicializar_master():
 
     conn.commit()
     conn.close()
+    _MASTER_INICIALIZADO = True
 
 
 

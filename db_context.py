@@ -1,5 +1,6 @@
 import os
 import sqlite3
+import time
 import psycopg2
 import streamlit as st
 
@@ -9,14 +10,30 @@ def ensure_dirs():
 
 
 def get_master_connection():
-    return psycopg2.connect(
-        host=st.secrets["SUPABASE_HOST"],
-        port=st.secrets["SUPABASE_PORT"],
-        database=st.secrets["SUPABASE_DB"],
-        user=st.secrets["SUPABASE_USER"],
-        password=st.secrets["SUPABASE_PASSWORD"],
-        sslmode="require"
-    )
+    ultimo_error = None
+
+    for intento in range(3):
+        try:
+            return psycopg2.connect(
+                host=st.secrets["SUPABASE_HOST"],
+                port=st.secrets["SUPABASE_PORT"],
+                database=st.secrets["SUPABASE_DB"],
+                user=st.secrets["SUPABASE_USER"],
+                password=st.secrets["SUPABASE_PASSWORD"],
+                sslmode="require",
+                connect_timeout=8,
+                keepalives=1,
+                keepalives_idle=30,
+                keepalives_interval=10,
+                keepalives_count=3,
+                application_name="efix_atlantico",
+            )
+        except psycopg2.OperationalError as e:
+            ultimo_error = e
+            if intento < 2:
+                time.sleep(1.5 * (intento + 1))
+
+    raise ultimo_error
 
 
 def get_db_path():
