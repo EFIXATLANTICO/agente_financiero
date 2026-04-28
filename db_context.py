@@ -21,13 +21,6 @@ def _secret_int(key, default):
         return default
 
 
-def _supabase_project_ref_from_user():
-    user = _secret_text("SUPABASE_USER", "")
-    if "." in user:
-        return user.split(".", 1)[1].strip()
-    return ""
-
-
 def _add_destino(destinos, host, port, user):
     host = str(host or "").strip()
     port = int(port or 5432)
@@ -52,9 +45,6 @@ def get_master_connection():
 
     _add_destino(destinos, host_pooler, port_pooler, user_pooler)
 
-    if port_pooler == 6543:
-        _add_destino(destinos, host_pooler, 5432, user_pooler)
-
     if "SUPABASE_DIRECT_HOST" in st.secrets:
         _add_destino(
             destinos,
@@ -62,15 +52,6 @@ def get_master_connection():
             _secret_int("SUPABASE_DIRECT_PORT", 5432),
             _secret_text("SUPABASE_DIRECT_USER", "postgres"),
         )
-    else:
-        project_ref = _supabase_project_ref_from_user()
-        if project_ref:
-            _add_destino(
-                destinos,
-                f"db.{project_ref}.supabase.co",
-                5432,
-                _secret_text("SUPABASE_DIRECT_USER", "postgres"),
-            )
 
     for destino in destinos:
         try:
