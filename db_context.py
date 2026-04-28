@@ -43,6 +43,7 @@ def _add_destino(destinos, host, port, user):
 
 def get_master_connection():
     ultimo_error = None
+    errores = []
     destinos = []
 
     host_pooler = _secret_text("SUPABASE_HOST")
@@ -89,6 +90,14 @@ def get_master_connection():
             )
         except psycopg2.OperationalError as e:
             ultimo_error = e
+            errores.append(
+                f"{destino['host']}:{destino['port']} usuario={destino['user']} -> {str(e).strip()}"
+            )
+
+    if errores:
+        raise psycopg2.OperationalError(
+            "No se pudo conectar a Supabase con ninguna ruta:\n\n" + "\n\n".join(errores)
+        )
 
     raise ultimo_error
 
