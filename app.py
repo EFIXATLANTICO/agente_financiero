@@ -2,8 +2,6 @@ import streamlit as st
 import psycopg2
 from login_view import pantalla_login, pantalla_selector_empresa
 from app_visual import mostrar_app
-from auth_empresas import existe_algun_usuario
-from bootstrap_sistema import bootstrap_inicial
 
 from db_context import get_master_connection
 
@@ -89,12 +87,6 @@ def main():
 
 
 def _main():
-
-    # ----------------------------
-    # BOOTSTRAP INICIAL
-    # ----------------------------
-    if not existe_algun_usuario():
-        bootstrap_inicial()
 
     # ----------------------------
     # LOGIN

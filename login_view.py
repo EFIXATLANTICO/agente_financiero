@@ -1,4 +1,5 @@
 ﻿import os
+import psycopg2
 import streamlit as st
 from auth_empresas import autenticar, empresas_de_usuario
 from db_context import set_active_db_path, clear_active_db_path
@@ -436,9 +437,14 @@ def pantalla_login():
             return
 
         with st.spinner("Verificando acceso..."):
-            user = autenticar(usuario_limpio, password_limpio)
-            if not user and usuario_limpio.lower() != usuario_limpio:
-                user = autenticar(usuario_limpio.lower(), password_limpio)
+            try:
+                user = autenticar(usuario_limpio, password_limpio)
+                if not user and usuario_limpio.lower() != usuario_limpio:
+                    user = autenticar(usuario_limpio.lower(), password_limpio)
+            except psycopg2.OperationalError:
+                st.error("La base de datos no responde ahora mismo. Espera unos segundos y vuelve a pulsar Entrar.")
+                st.markdown('</div>', unsafe_allow_html=True)
+                return
 
         if not user:
             st.error("Usuario o contraseña incorrectos")
