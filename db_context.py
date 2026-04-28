@@ -43,6 +43,9 @@ def get_master_connection():
     port_pooler = _secret_int("SUPABASE_PORT", 6543)
     user_pooler = _secret_text("SUPABASE_USER")
 
+    if host_pooler and "pooler.supabase.com" in host_pooler:
+        port_pooler = 5432
+
     _add_destino(destinos, host_pooler, port_pooler, user_pooler)
 
     if "SUPABASE_DIRECT_HOST" in st.secrets:
