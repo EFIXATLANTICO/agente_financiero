@@ -39,15 +39,8 @@ def get_master_connection():
     errores = []
     destinos = []
 
-    host_pooler = _secret_text("SUPABASE_HOST")
-    port_pooler = _secret_int("SUPABASE_PORT", 6543)
-    user_pooler = _secret_text("SUPABASE_USER")
-
-    if host_pooler and "pooler.supabase.com" in host_pooler:
-        port_pooler = 5432
-
-    _add_destino(destinos, host_pooler, port_pooler, user_pooler)
-
+    # Prioridad 1: conexión directa. Es la ruta más estable ahora que el proyecto
+    # tiene IPv4 activo en Supabase.
     if "SUPABASE_DIRECT_HOST" in st.secrets:
         _add_destino(
             destinos,
@@ -55,6 +48,13 @@ def get_master_connection():
             _secret_int("SUPABASE_DIRECT_PORT", 5432),
             _secret_text("SUPABASE_DIRECT_USER", "postgres"),
         )
+
+    # Prioridad 2: configuración principal. Puede ser directa o pooler según secrets.
+    host_principal = _secret_text("SUPABASE_HOST")
+    port_principal = _secret_int("SUPABASE_PORT", 5432)
+    user_principal = _secret_text("SUPABASE_USER")
+
+    _add_destino(destinos, host_principal, port_principal, user_principal)
 
     for destino in destinos:
         for intento in range(2):
@@ -77,7 +77,7 @@ def get_master_connection():
                 ultimo_error = e
                 errores.append(
                     f"{destino['host']}:{destino['port']} usuario={destino['user']} "
-                    f"intento={intento + 1} (SUPABASE_PORT leido={port_pooler}) -> {str(e).strip()}"
+                    f"intento={intento + 1} -> {str(e).strip()}"
                 )
 
     if errores:
