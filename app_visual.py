@@ -1688,6 +1688,21 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
     importes_texto = extraer_importes_desde_texto_fianza(texto)
     tesoreria = obtener_sentido_tesoreria_asiento(cursor, asiento_id)
 
+    terminos_fianza_explicitos = ["fianza", "deposito", "depósito", "garantia", "garantía"]
+    tiene_fianza_explicita = any(p in texto for p in terminos_fianza_explicitos)
+
+    if not tiene_fianza_explicita:
+        return {
+            "es_fianza": False,
+            "tipo": "no_fianza",
+            "confianza": "baja",
+            "score": 0,
+            "importe_sugerido": 0.0,
+            "cuenta_tesoreria": tesoreria["cuenta_tesoreria"],
+            "motivos": ["No hay terminos explicitos de fianza, deposito o garantia"],
+            "fianza_origen": None
+        }
+
     palabras_fianza = ["fianza", "deposito", "garantia", "garantía", "depósito"]
     palabras_devolucion = ["devol", "reintegro", "refund", "reembolso", "cancelacion", "cancelación"]
 
@@ -2717,7 +2732,12 @@ def pantalla_libro_diario(cursor):
 
             analisis_fianza = analizar_asiento_fianza(cursor, asiento_id, fecha, concepto)
             es_asiento_ya_fianza = tipo_operacion in ("fianza_recibida", "fianza_devuelta")
-            if analisis_fianza.get("es_fianza") and analisis_fianza.get("tipo") == "fianza_recibida":
+            estado_revision_fianza, _ = obtener_estado_revision_fianza(asiento_id)
+            if (
+                estado_revision_fianza != "descartada"
+                and analisis_fianza.get("es_fianza")
+                and analisis_fianza.get("tipo") == "fianza_recibida"
+            ):
                 mostrar_aviso_fianza = True
                 asiento_fianza_existente = existe_fianza_asociada(asiento_id, concepto)
 
@@ -2750,7 +2770,22 @@ def pantalla_libro_diario(cursor):
                     st.write("")
                     st.write("")
 
-                if st.button("Crear asiento de fianza", key=f"fianza_{asiento_id}"):
+                accion_fianza_1, accion_fianza_2 = st.columns(2)
+
+                with accion_fianza_1:
+                    crear_fianza = st.button("Crear asiento de fianza", key=f"fianza_{asiento_id}")
+
+                with accion_fianza_2:
+                    if st.button("No es una fianza", key=f"no_fianza_{asiento_id}"):
+                        guardar_estado_revision_fianza(
+                            asiento_origen_id=asiento_id,
+                            estado="descartada",
+                            comentario="Descartada desde libro diario"
+                        )
+                        st.success("Marcado como no fianza. No volvera a sugerirse en este asiento.")
+                        st.rerun()
+
+                if crear_fianza:
                     resultado_fianza = crear_asiento_fianza_recibida(
                         fecha=fecha,
                         concepto=f"Fianza asociada a asiento {asiento_id} - {concepto}",
