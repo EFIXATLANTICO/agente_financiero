@@ -70,9 +70,12 @@ def inicializar_bancos_seguros():
         fecha_vencimiento TEXT,
         estado TEXT NOT NULL DEFAULT 'vigente',
         observaciones TEXT,
+        asiento_id INTEGER,
         creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
+
+    cursor.execute("ALTER TABLE seguros_empresa ADD COLUMN IF NOT EXISTS asiento_id INTEGER")
 
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS movimientos_banco (
@@ -302,13 +305,61 @@ def listar_seguros():
             s.fecha_inicio,
             s.fecha_vencimiento,
             s.estado,
-            s.observaciones
+            s.observaciones,
+            s.asiento_id
         FROM seguros_empresa s
         LEFT JOIN entidades_financieras e ON e.id = s.entidad_id
         ORDER BY s.estado, s.fecha_vencimiento NULLS LAST, s.id DESC
     """, conn)
     conn.close()
     return df
+
+
+def contabilizar_pago_seguro(seguro_id, fecha_pago=None, cuenta_pago="572 Bancos"):
+    from contabilidad import crear_asiento_completo
+
+    inicializar_bancos_seguros()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, compania, ramo, poliza, prima_anual, asiento_id
+        FROM seguros_empresa
+        WHERE id = %s
+    """, (seguro_id,))
+    fila = cursor.fetchone()
+    conn.close()
+
+    if not fila:
+        return {"ok": False, "mensaje": "Seguro no encontrado"}
+
+    seguro_id, compania, ramo, poliza, prima_anual, asiento_id = fila
+    if asiento_id:
+        return {"ok": False, "mensaje": f"Este seguro ya esta contabilizado en el asiento {asiento_id}"}
+
+    importe = float(prima_anual or 0)
+    if importe <= 0:
+        return {"ok": False, "mensaje": "La prima anual debe ser mayor que cero"}
+
+    fecha_pago = fecha_pago or _hoy()
+    concepto = f"Pago seguro {ramo} {compania or ''} poliza {poliza or ''}".strip()
+    lineas = [
+        ("625 Primas de seguros", "debe", importe),
+        (cuenta_pago, "haber", importe),
+    ]
+    nuevo_asiento_id = crear_asiento_completo(fecha_pago, concepto, "seguro", lineas)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE seguros_empresa
+        SET asiento_id = %s, estado = 'contabilizado'
+        WHERE id = %s
+    """, (nuevo_asiento_id, seguro_id))
+    conn.commit()
+    conn.close()
+
+    return {"ok": True, "mensaje": f"Seguro contabilizado en asiento {nuevo_asiento_id}", "asiento_id": nuevo_asiento_id}
 
 
 def listar_movimientos_bancarios(limit=500):
