@@ -24,6 +24,21 @@ revisado INTEGER DEFAULT 0
     )
     """)
 
+    for sql in [
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS fecha TEXT",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS concepto TEXT",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS importe REAL",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS sentido TEXT",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS saldo REAL",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS referencia TEXT",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS estado_conciliacion TEXT DEFAULT 'pendiente'",
+        "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS revisado INTEGER DEFAULT 0",
+        "UPDATE movimientos_banco SET sentido = CASE WHEN importe < 0 THEN 'pago' ELSE 'ingreso' END WHERE sentido IS NULL",
+        "UPDATE movimientos_banco SET estado_conciliacion = 'pendiente' WHERE estado_conciliacion IS NULL",
+        "UPDATE movimientos_banco SET revisado = 0 WHERE revisado IS NULL",
+    ]:
+        cursor.execute(sql)
+
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS conciliaciones (
         id SERIAL PRIMARY KEY,
