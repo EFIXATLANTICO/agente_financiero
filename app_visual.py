@@ -790,6 +790,57 @@ def _preseleccionar_facturas(df, importe_movimiento):
 # PANTALLAS DE BLOQUES
 # =========================================================
 
+@st.cache_data(ttl=120, show_spinner=False)
+def resumen_control_rapido():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM asientos a
+            LEFT JOIN lineas_asiento l ON a.id = l.asiento_id
+            WHERE l.id IS NULL
+        """)
+        sin_lineas = int(cursor.fetchone()[0] or 0)
+
+        cursor.execute("""
+            SELECT COUNT(*)
+            FROM (
+                SELECT a.id
+                FROM asientos a
+                JOIN lineas_asiento l ON a.id = l.asiento_id
+                GROUP BY a.id
+                HAVING ROUND((
+                    COALESCE(SUM(CASE WHEN l.movimiento = 'debe' THEN l.importe::numeric ELSE 0 END), 0)
+                    - COALESCE(SUM(CASE WHEN l.movimiento = 'haber' THEN l.importe::numeric ELSE 0 END), 0)
+                ), 2) != 0
+            ) q
+        """)
+        descuadrados = int(cursor.fetchone()[0] or 0)
+
+        return {
+            "incidencias": sin_lineas + descuadrados,
+            "sin_lineas": sin_lineas,
+            "descuadrados": descuadrados,
+        }
+    finally:
+        conn.close()
+
+
+@st.cache_data(ttl=120, show_spinner=False)
+def total_inmovilizado_rapido():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("SELECT COUNT(*) FROM inmovilizado")
+        return int(cursor.fetchone()[0] or 0)
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+
 def pantalla_panel_control():
     st.markdown('<div class="block-chip">Visión general</div>', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Panel de control</div>', unsafe_allow_html=True)
@@ -805,47 +856,13 @@ def pantalla_panel_control():
         }
 
     try:
-        df_control = validar_sistema_completo()
-        inicializar_incidencias_control_revisadas()
-
-        if df_control.empty:
-            df_control_activo = df_control.copy()
-        else:
-            revisadas_global = []
-
-            for _, row in df_control.iterrows():
-                asiento_id_tmp = row.get("asiento_id")
-                tipo_tmp = row.get("tipo")
-                detalle_tmp = row.get("detalle")
-
-                if pd.isna(asiento_id_tmp):
-                    revisadas_global.append(False)
-                else:
-                    revisadas_global.append(
-                        incidencia_control_ya_revisada(
-                            int(asiento_id_tmp),
-                            str(tipo_tmp),
-                            str(detalle_tmp)
-                        )
-                    )
-
-            if len(revisadas_global) == len(df_control):
-                df_control_activo = df_control[[not x for x in revisadas_global]].copy()
-            else:
-                df_control_activo = df_control.copy()
-
-        incidencias = 0 if df_control_activo.empty else len(df_control_activo)
-
+        control_rapido = resumen_control_rapido()
+        incidencias = int(control_rapido["incidencias"])
     except Exception:
         incidencias = 0
-        df_control = pd.DataFrame()
-        df_control_activo = pd.DataFrame()
+        control_rapido = {"sin_lineas": 0, "descuadrados": 0}
 
-    try:
-        df_inmo = ver_inmovilizado()
-        total_bienes = 0 if df_inmo.empty else len(df_inmo)
-    except Exception:
-        total_bienes = 0
+    total_bienes = total_inmovilizado_rapido()
 
     estado = "Correcto"
     if incidencias > 0 or resumen["movimientos_pendientes"] > 0:
@@ -947,6 +964,7 @@ def pantalla_panel_control():
     with col_a:
         if st.button("Comprobar sistema"):
             try:
+                resumen_control_rapido.clear()
                 df_revision = validar_sistema_completo()
 
                 if df_revision.empty:
@@ -972,10 +990,14 @@ def pantalla_panel_control():
     tab1, tab2 = st.tabs(["Incidencias", "Banco pendiente"])
 
     with tab1:
-        if df_control_activo.empty:
+        if incidencias == 0:
             st.success("No hay incidencias.")
         else:
-            st.dataframe(df_control_activo, use_container_width=True)
+            st.warning(
+                f"Vista rapida: {control_rapido['sin_lineas']} asientos sin lineas "
+                f"y {control_rapido['descuadrados']} asientos descuadrados. "
+                "Entra en Control contable para la revision completa."
+            )
 
     with tab2:
         try:
@@ -2520,8 +2542,8 @@ def pantalla_libro_diario(cursor):
         limite = st.number_input(
             "Número máximo de asientos a mostrar",
             min_value=50,
-            max_value=100000,
-            value=500,
+            max_value=2000,
+            value=200,
             step=50,
             key="libro_limite"
         )
@@ -2570,15 +2592,17 @@ def pantalla_libro_diario(cursor):
         cursor.execute("""
             SELECT id, fecha, concepto, tipo_operacion
             FROM asientos
-            ORDER BY id ASC
-        """)
+            ORDER BY id DESC
+            LIMIT %s
+        """, (int(limite),))
     else:
         cursor.execute("""
             SELECT id, fecha, concepto, tipo_operacion
             FROM asientos
             WHERE tipo_operacion = %s
-            ORDER BY id ASC
-        """, (filtro_tipo,))
+            ORDER BY id DESC
+            LIMIT %s
+        """, (filtro_tipo, int(limite)))
 
     asientos = cursor.fetchall()
 
@@ -3496,8 +3520,8 @@ def convertir_fila_factura_a_dict(cursor, fila):
     return dict(zip(columnas, fila))
 
 
-def obtener_facturas_dict(cursor):
-    cursor.execute("SELECT * FROM facturas ORDER BY id DESC")
+def obtener_facturas_dict(cursor, limite=500):
+    cursor.execute("SELECT * FROM facturas ORDER BY id DESC LIMIT %s", (int(limite),))
     filas = cursor.fetchall()
 
     columnas = [desc[0] for desc in cursor.description]
@@ -5107,7 +5131,7 @@ def pantalla_importar_excel():
 def pantalla_ver_importaciones(cursor):
     st.markdown('<div class="section-title">Importaciones registradas</div>', unsafe_allow_html=True)
 
-    cursor.execute("SELECT * FROM importaciones ORDER BY id DESC")
+    cursor.execute("SELECT * FROM importaciones ORDER BY id DESC LIMIT %s", (300,))
     importaciones = cursor.fetchall()
 
     if importaciones:
@@ -5568,7 +5592,7 @@ def pantalla_operaciones(cursor):
     st.markdown('<div class="section-title">Operaciones registradas</div>', unsafe_allow_html=True)
 
     try:
-        cursor.execute("SELECT * FROM operaciones ORDER BY id DESC")
+        cursor.execute("SELECT * FROM operaciones ORDER BY id DESC LIMIT %s", (500,))
         ops = cursor.fetchall()
 
         try:
@@ -6074,11 +6098,15 @@ def mostrar_app():
 
     aplicar_estilo("app")
 
-    inicializar_master()
     set_active_db_path(empresa_activa["db_path"])
-    inicializar_bd_empresa()
-    migrar_bd_empresa()
-    inicializar_tablas_conciliacion()
+
+    empresa_runtime_key = f"runtime_inicializado_{empresa_activa['db_path']}"
+    if not st.session_state.get(empresa_runtime_key):
+        inicializar_master()
+        inicializar_bd_empresa()
+        migrar_bd_empresa()
+        inicializar_tablas_conciliacion()
+        st.session_state[empresa_runtime_key] = True
 
     # mostrar_cabecera_efix()
 

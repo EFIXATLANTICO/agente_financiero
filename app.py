@@ -84,7 +84,9 @@ def main():
         pantalla_selector_empresa()
         return
 
-    crear_datos_demo()
+    if not st.session_state.get("datos_demo_verificados"):
+        crear_datos_demo()
+        st.session_state["datos_demo_verificados"] = True
 
     # ----------------------------
     # APP PRINCIPAL
