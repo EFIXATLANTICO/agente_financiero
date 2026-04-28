@@ -72,7 +72,8 @@ def get_master_connection():
         except psycopg2.OperationalError as e:
             ultimo_error = e
             errores.append(
-                f"{destino['host']}:{destino['port']} usuario={destino['user']} -> {str(e).strip()}"
+                f"{destino['host']}:{destino['port']} usuario={destino['user']} "
+                f"(SUPABASE_PORT leido={port_pooler}) -> {str(e).strip()}"
             )
 
     if errores:
