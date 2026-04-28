@@ -57,27 +57,28 @@ def get_master_connection():
         )
 
     for destino in destinos:
-        try:
-            return psycopg2.connect(
-                host=destino["host"],
-                port=destino["port"],
-                database=st.secrets["SUPABASE_DB"],
-                user=destino["user"],
-                password=st.secrets["SUPABASE_PASSWORD"],
-                sslmode="require",
-                connect_timeout=4,
-                keepalives=1,
-                keepalives_idle=30,
-                keepalives_interval=10,
-                keepalives_count=3,
-                application_name="efix_atlantico",
-            )
-        except psycopg2.OperationalError as e:
-            ultimo_error = e
-            errores.append(
-                f"{destino['host']}:{destino['port']} usuario={destino['user']} "
-                f"(SUPABASE_PORT leido={port_pooler}) -> {str(e).strip()}"
-            )
+        for intento in range(2):
+            try:
+                return psycopg2.connect(
+                    host=destino["host"],
+                    port=destino["port"],
+                    database=st.secrets["SUPABASE_DB"],
+                    user=destino["user"],
+                    password=st.secrets["SUPABASE_PASSWORD"],
+                    sslmode="require",
+                    connect_timeout=15,
+                    keepalives=1,
+                    keepalives_idle=30,
+                    keepalives_interval=10,
+                    keepalives_count=3,
+                    application_name="efix_atlantico",
+                )
+            except psycopg2.OperationalError as e:
+                ultimo_error = e
+                errores.append(
+                    f"{destino['host']}:{destino['port']} usuario={destino['user']} "
+                    f"intento={intento + 1} (SUPABASE_PORT leido={port_pooler}) -> {str(e).strip()}"
+                )
 
     if errores:
         raise psycopg2.OperationalError(
