@@ -61,11 +61,11 @@ def crear_datos_demo():
     conn.close()
 
 # ----------------------------
-# CONFIGURACIÓN APP
+# CONFIGURACION APP
 # ----------------------------
 st.set_page_config(
-    page_title="EFIX ATLÁNTICO",
-    page_icon="📘",
+    page_title="EFIX ATLANTICO",
+    page_icon="",
     layout="wide",
     menu_items={
         "Get Help": None,
@@ -75,7 +75,7 @@ st.set_page_config(
 )
 
 # ----------------------------
-# FUNCIÓN PRINCIPAL
+# FUNCION PRINCIPAL
 # ----------------------------
 def main():
     try:
@@ -96,7 +96,7 @@ def _main():
         return
 
     # ----------------------------
-    # SELECCIÓN EMPRESA
+    # SELECCION EMPRESA
     # ----------------------------
     if "empresa_activa" not in st.session_state:
         pantalla_selector_empresa()

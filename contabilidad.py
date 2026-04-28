@@ -28,7 +28,7 @@ def crear_asiento(fecha, concepto, tipo_operacion):
 
 def agregar_linea_asiento(asiento_id, cuenta, movimiento, importe):
     """
-    Agrega una línea a un asiento existente.
+    Agrega una linea a un asiento existente.
     """
     movimiento = (movimiento or "").strip().lower()
     if movimiento not in ("debe", "haber"):
@@ -48,7 +48,7 @@ def agregar_linea_asiento(asiento_id, cuenta, movimiento, importe):
 
 def obtener_lineas_asiento(asiento_id):
     """
-    Devuelve las líneas de un asiento.
+    Devuelve las lineas de un asiento.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -69,7 +69,7 @@ def obtener_lineas_asiento(asiento_id):
 def obtener_libro_diario(tipo_operacion=None, limite=None):
     """
     Devuelve el libro diario en formato lista de diccionarios.
-    Cada asiento incluye sus líneas.
+    Cada asiento incluye sus lineas.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -125,7 +125,7 @@ def obtener_libro_diario(tipo_operacion=None, limite=None):
 
 def ver_libro_diario():
     """
-    Mantiene compatibilidad con tu versión anterior:
+    Mantiene compatibilidad con tu version anterior:
     imprime el diario por consola.
     """
     asientos = obtener_libro_diario()
@@ -147,8 +147,8 @@ def ver_libro_diario():
         print("-------------------------")
 def crear_asiento_completo(fecha, concepto, tipo_operacion, lineas):
     """
-    Crea un asiento completo con todas sus líneas en una sola transacción.
-    Si falla cualquier línea, no se guarda nada.
+    Crea un asiento completo con todas sus lineas en una sola transaccion.
+    Si falla cualquier linea, no se guarda nada.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -294,7 +294,7 @@ def obtener_mayor(cuenta):
 
 def ver_mayor(cuenta):
     """
-    Mantiene compatibilidad con tu versión anterior:
+    Mantiene compatibilidad con tu version anterior:
     imprime el mayor por consola.
     """
     movimientos = obtener_mayor(cuenta)
@@ -336,8 +336,8 @@ def borrar_asiento(asiento_id):
 
 def reset_contabilidad():
     """
-    Borra toda la contabilidad y datos operativos básicos de la empresa activa.
-    Devuelve un resumen verificando que asientos y líneas hayan quedado a cero.
+    Borra toda la contabilidad y datos operativos basicos de la empresa activa.
+    Devuelve un resumen verificando que asientos y lineas hayan quedado a cero.
     """
     conn = get_connection()
     cursor = conn.cursor()
@@ -440,7 +440,7 @@ def aplicar_correccion_incidencia(incidencia_id, propuesta):
             return {"ok": False, "error": "Los importes deben ser mayores que cero"}
 
         if round(debe, 2) != round(haber, 2):
-            return {"ok": False, "error": "El asiento no está cuadrado"}
+            return {"ok": False, "error": "El asiento no esta cuadrado"}
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
@@ -669,7 +669,7 @@ def buscar_fianza_recibida_candidata_para_devolucion(cursor, importe_objetivo=No
             elif diferencia <= 20:
                 score += 20
 
-        palabras_clave = ["cliente", "hector", "reserva", "alquiler", "fianza", "deposito", "depósito", "garantia", "garantía"]
+        palabras_clave = ["cliente", "hector", "reserva", "alquiler", "fianza", "deposito", "deposito", "garantia", "garantia"]
         for palabra in palabras_clave:
             if palabra in texto_referencia and palabra in concepto_txt:
                 score += 10
@@ -807,7 +807,7 @@ def crear_asiento_fianza_devuelta(
             return {
                 "ok": False,
                 "duplicado": True,
-                "error": f"Ya existe una devolución de fianza para este asiento (ID {existente_id})"
+                "error": f"Ya existe una devolucion de fianza para este asiento (ID {existente_id})"
             }
 
         if asiento_fianza_recibida_id is None:
@@ -821,15 +821,15 @@ def crear_asiento_fianza_devuelta(
         if saldo["pendiente"] <= 0:
             return {
                 "ok": False,
-                "error": f"La fianza origen ya está completamente devuelta (ID {asiento_fianza_recibida_id})"
+                "error": f"La fianza origen ya esta completamente devuelta (ID {asiento_fianza_recibida_id})"
             }
 
         if importe - saldo["pendiente"] > 0.01:
             return {
                 "ok": False,
                 "error": (
-                    f"El importe a devolver ({importe:.2f} €) supera el saldo pendiente "
-                    f"de la fianza origen ({saldo['pendiente']:.2f} €)"
+                    f"El importe a devolver ({importe:.2f} ) supera el saldo pendiente "
+                    f"de la fianza origen ({saldo['pendiente']:.2f} )"
                 )
             }
 

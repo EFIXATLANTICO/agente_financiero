@@ -132,7 +132,7 @@ def calcular_base_amortizable(coste: float, valor_residual: float) -> float:
 def calcular_amortizacion_anual(coste: float, vida_util_anios: float, valor_residual: float = 0) -> float:
     base = calcular_base_amortizable(coste, valor_residual)
     if vida_util_anios <= 0:
-        raise ValueError("La vida útil debe ser mayor que 0.")
+        raise ValueError("La vida util debe ser mayor que 0.")
     return round(base / float(vida_util_anios), 2)
 
 
@@ -148,8 +148,8 @@ def alta_inmovilizado(
     fecha_inicio_amortizacion=None,
     valor_residual=0,
     cuenta_inmovilizado="213 Maquinaria",
-    cuenta_amort_acumulada="2813 Amortización acumulada de maquinaria",
-    cuenta_gasto_amortizacion="681 Amortización del inmovilizado material",
+    cuenta_amort_acumulada="2813 Amortizacion acumulada de maquinaria",
+    cuenta_gasto_amortizacion="681 Amortizacion del inmovilizado material",
     observaciones=""
 ):
     inicializar_tabla_inmovilizado()
@@ -164,7 +164,7 @@ def alta_inmovilizado(
         fecha_inicio_amortizacion = fecha_compra
 
     if not validar_fecha(fecha_inicio_amortizacion):
-        raise ValueError("La fecha de inicio de amortización debe tener formato YYYY-MM-DD.")
+        raise ValueError("La fecha de inicio de amortizacion debe tener formato YYYY-MM-DD.")
 
     coste = float(coste)
     vida_util_anios = float(vida_util_anios)
@@ -173,7 +173,7 @@ def alta_inmovilizado(
     if coste <= 0:
         raise ValueError("El coste debe ser mayor que 0.")
     if vida_util_anios <= 0:
-        raise ValueError("La vida útil debe ser mayor que 0.")
+        raise ValueError("La vida util debe ser mayor que 0.")
     if valor_residual < 0:
         raise ValueError("El valor residual no puede ser negativo.")
     if valor_residual >= coste:
@@ -379,7 +379,7 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
         raise ValueError("La fecha del asiento debe tener formato YYYY-MM-DD.")
 
     if ya_generada_amortizacion(bien_id, ejercicio, mes):
-        raise ValueError(f"Ya existe amortización generada para {ejercicio}-{mes:02d}.")
+        raise ValueError(f"Ya existe amortizacion generada para {ejercicio}-{mes:02d}.")
 
     bien = obtener_bien(bien_id)
     if not bien:
@@ -387,7 +387,7 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
 
     importe = calcular_importe_amortizacion_mes(bien_id, ejercicio, mes)
     if importe <= 0:
-        raise ValueError("No corresponde generar amortización para ese periodo o ya está totalmente amortizado.")
+        raise ValueError("No corresponde generar amortizacion para ese periodo o ya esta totalmente amortizado.")
 
     conexion = get_connection()
     cursor = conexion.cursor()
@@ -399,7 +399,7 @@ def generar_asiento_amortizacion(bien_id, ejercicio, mes, fecha_asiento=None):
         RETURNING id
         """, (
             fecha_asiento,
-            f"Amortización {ejercicio}-{mes:02d} - {bien['nombre']}",
+            f"Amortizacion {ejercicio}-{mes:02d} - {bien['nombre']}",
             "amortizacion"
         ))
         asiento_id = cursor.fetchone()[0]
@@ -535,7 +535,7 @@ def cuadro_amortizacion(bien_id):
         filas.append({
             "Periodo": f"{year}-{month:02d}",
             "Cuota": round(cuota, 2),
-            "Amortización acumulada": acumulada,
+            "Amortizacion acumulada": acumulada,
             "Pendiente amortizar": pendiente_despues
         })
 

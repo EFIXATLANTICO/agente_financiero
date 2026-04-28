@@ -87,7 +87,7 @@ def normalizar(texto):
     texto = (texto or "").lower().strip()
     texto = unicodedata.normalize("NFD", texto)
     texto = "".join(c for c in texto if unicodedata.category(c) != "Mn")
-    texto = texto.replace("€", " euros")
+    texto = texto.replace("", " euros")
     texto = re.sub(r"[^\w\s.,%+-]", " ", texto)
     texto = re.sub(r"\s+", " ", texto).strip()
     return texto
@@ -107,7 +107,7 @@ def _numero(txt):
     txt = str(txt or "").strip()
     if "," in txt and "." in txt:
         txt = txt.replace(".", "").replace(",", ".")
-    elif re.match(r"^\d{1,3}(?:\.\d{3})+$", txt):
+    elif re.match(r"^\d{1,3}(:\.\d{3})+$", txt):
         txt = txt.replace(".", "")
     else:
         txt = txt.replace(",", ".")
@@ -117,10 +117,10 @@ def _numero(txt):
 def extraer_importes(texto):
     t = normalizar(texto)
     valores = []
-    for m in re.finditer(r"(?<!\w)(\d+(?:[.,]\d+)?)(?!\w)", t):
+    for m in re.finditer(r"(<!\w)(\d+(:[.,]\d+))(!\w)", t):
         valor = _numero(m.group(1))
         post = t[m.end():m.end() + 20]
-        if "%" in post or re.search(r"\b(dia|dias|ano|anos|año|años)\b", post):
+        if "%" in post or re.search(r"\b(dia|dias|ano|anos|ano|anos)\b", post):
             continue
         valores.append(valor)
     return valores
@@ -134,7 +134,7 @@ def importe_principal(texto):
 
 
 def extraer_porcentaje(texto, defecto=None):
-    m = re.search(r"(\d+(?:[.,]\d+)?)\s*%", normalizar(texto))
+    m = re.search(r"(\d+(:[.,]\d+))\s*%", normalizar(texto))
     if not m:
         return defecto
     return _numero(m.group(1))
@@ -158,11 +158,11 @@ def fecha_mas_dias(fecha, dias):
 def detectar_tercero(texto):
     original = texto or ""
     patrones = [
-        r"\ba\s+([A-Z0-9ÑÁÉÍÓÚÜ.,&\-\s]+?)\s+por\b",
-        r"\bde\s+([A-Z0-9ÑÁÉÍÓÚÜ.,&\-\s]+?)\s+por\b",
-        r"\ba\s+([A-Z0-9ÑÁÉÍÓÚÜ.,&\-\s]+?)\s+mediante\b",
-        r"\bcliente\s+([A-Z0-9ÑÁÉÍÓÚÜ.,&\-\s]+?)\s+por\b",
-        r"\bproveedor\s+([A-Z0-9ÑÁÉÍÓÚÜ.,&\-\s]+?)\s+por\b",
+        r"\ba\s+([A-Z0-9NAEIOUU.,&\-\s]+)\s+por\b",
+        r"\bde\s+([A-Z0-9NAEIOUU.,&\-\s]+)\s+por\b",
+        r"\ba\s+([A-Z0-9NAEIOUU.,&\-\s]+)\s+mediante\b",
+        r"\bcliente\s+([A-Z0-9NAEIOUU.,&\-\s]+)\s+por\b",
+        r"\bproveedor\s+([A-Z0-9NAEIOUU.,&\-\s]+)\s+por\b",
     ]
     for patron in patrones:
         m = re.search(patron, original, flags=re.IGNORECASE)
@@ -183,7 +183,7 @@ def con_igic(texto, base, igic_defecto):
     if any(p in t for p in ["sin iva", "sin igic", "exenta", "intracomunitaria", "exportacion"]):
         pct = 0.0
     else:
-        m = re.search(r"(?:iva|igic)\s*(?:del\s*)?(\d+(?:[.,]\d+)?)", t)
+        m = re.search(r"(:iva|igic)\s*(:del\s*)(\d+(:[.,]\d+))", t)
         pct = _numero(m.group(1)) if m else float(igic_defecto or 0)
     cuota = round(float(base) * pct / 100, 2)
     return pct, cuota, round(float(base) + cuota, 2)
@@ -296,7 +296,7 @@ def resolver_operacion_avanzada(texto, fecha, igic_defecto=7.0):
 
     elif contiene(t, "compra", "mercaderias") or contiene(t, "compra", "existencias"):
         descuento = 0.0
-        m = re.search(r"descuento comercial del (\d+(?:[.,]\d+)?)", t)
+        m = re.search(r"descuento comercial del (\d+(:[.,]\d+))", t)
         if m:
             descuento = round(base_imponible * _numero(m.group(1)) / 100, 2)
             base_imponible = round(base_imponible - descuento, 2)

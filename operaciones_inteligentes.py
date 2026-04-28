@@ -34,26 +34,26 @@ def _a_float(valor, default=0.0):
 
 
 # =========================
-# EXTRACCIÓN Y DETECCIÓN
+# EXTRACCION Y DETECCION
 # =========================
 
 def extraer_importe(texto):
     """
-    Extrae el importe principal de la operación evitando confundirlo con:
+    Extrae el importe principal de la operacion evitando confundirlo con:
     - porcentajes de IGIC/IVA
-    - plazos tipo '45 días'
-    - números accesorios
+    - plazos tipo '45 dias'
+    - numeros accesorios
     Prioriza importes expresados con 'por', 'por valor de', 'importe', 'total'.
     """
     texto_original = texto or ""
     t = _texto_normalizado(texto_original)
 
-    # 1) Prioridad máxima: patrones explícitos de importe
+    # 1) Prioridad maxima: patrones explicitos de importe
     patrones_importe = [
-        r"\bpor\s+valor\s+de\s+(\d+(?:[.,]\d+)?)",
-        r"\bpor\s+(\d+(?:[.,]\d+)?)\s*(?:euros|€)?",
-        r"\bimporte\s+de\s+(\d+(?:[.,]\d+)?)",
-        r"\btotal\s+de\s+(\d+(?:[.,]\d+)?)",
+        r"\bpor\s+valor\s+de\s+(\d+(:[.,]\d+))",
+        r"\bpor\s+(\d+(:[.,]\d+))\s*(:euros|)",
+        r"\bimporte\s+de\s+(\d+(:[.,]\d+))",
+        r"\btotal\s+de\s+(\d+(:[.,]\d+))",
     ]
 
     for patron in patrones_importe:
@@ -61,10 +61,10 @@ def extraer_importe(texto):
         if m:
             return float(m.group(1).replace(",", "."))
 
-    # 2) Si no hay patrón explícito, filtrar números problemáticos
+    # 2) Si no hay patron explicito, filtrar numeros problematicos
     candidatos = []
 
-    for match in re.finditer(r"\d+(?:[.,]\d+)?", texto_original):
+    for match in re.finditer(r"\d+(:[.,]\d+)", texto_original):
         valor_txt = match.group(0)
         inicio, fin = match.span()
 
@@ -79,9 +79,9 @@ def extraer_importe(texto):
 
         es_plazo = (
             "dia" in contexto_posterior
-            or "días" in contexto_posterior
             or "dias" in contexto_posterior
-            or "día" in contexto_posterior
+            or "dias" in contexto_posterior
+            or "dia" in contexto_posterior
         )
 
         if es_porcentaje_fiscal or es_plazo:
@@ -90,13 +90,13 @@ def extraer_importe(texto):
         candidatos.append(valor_txt)
 
     if not candidatos:
-        numeros = re.findall(r"\d+(?:[.,]\d+)?", texto_original)
+        numeros = re.findall(r"\d+(:[.,]\d+)", texto_original)
         if not numeros:
             return None
         candidatos = numeros
 
-    # 3) Mejor quedarse con el mayor candidato que con el último:
-    # normalmente el importe será mayor que días (45), IGIC (7), etc.
+    # 3) Mejor quedarse con el mayor candidato que con el ultimo:
+    # normalmente el importe sera mayor que dias (45), IGIC (7), etc.
     valores = []
     for c in candidatos:
         try:
@@ -118,13 +118,13 @@ def detectar_forma_pago(texto):
     if "transferencia" in t or "banco" in t or "transfer" in t:
         return "transferencia"
 
-    if "pagaré" in t or "pagare" in t:
+    if "pagare" in t or "pagare" in t:
         return "pagare"
 
     if "confirming" in t:
         return "confirming"
 
-    if "credito" in t or "crédito" in t or "aplazado" in t:
+    if "credito" in t or "credito" in t or "aplazado" in t:
         return "credito"
 
     return "credito"
@@ -148,8 +148,8 @@ def detectar_tipo_operacion(texto):
     ]
 
     patrones_financiacion = [
-        "prestamo", "préstamo",
-        "amortizacion", "amortización",
+        "prestamo", "prestamo",
+        "amortizacion", "amortizacion",
         "principal", "intereses",
         "anticipo", "fianza",
     ]
@@ -171,10 +171,10 @@ def detectar_tipo_ingreso(texto):
     if "alquiler" in t or "arrendamiento" in t or "renting" in t:
         return "alquiler"
 
-    if any(p in t for p in ["servicio", "mantenimiento", "asesoria", "asesoría"]):
+    if any(p in t for p in ["servicio", "mantenimiento", "asesoria", "asesoria"]):
         return "servicio"
 
-    if any(p in t for p in ["venta", "mercader", "producto", "maquina", "máquina", "maquinaria"]):
+    if any(p in t for p in ["venta", "mercader", "producto", "maquina", "maquina", "maquinaria"]):
         return "venta"
 
     if CONFIG_EMPRESA.get("actividad_principal") == "alquiler de maquinaria":
@@ -187,29 +187,29 @@ def detectar_tipo_avanzado(texto):
     t = _texto_normalizado(texto)
 
     if any(p in t for p in [
-        "aportacion socio", "aportación socio", "aportacion de socios", "aportación de socios"
+        "aportacion socio", "aportacion socio", "aportacion de socios", "aportacion de socios"
     ]):
         return "aportacion_socios"
 
     if any(p in t for p in [
-        "ampliacion capital", "ampliación capital", "ampliacion de capital", "ampliación de capital"
+        "ampliacion capital", "ampliacion capital", "ampliacion de capital", "ampliacion de capital"
     ]):
         return "ampliacion_capital"
 
     if any(p in t for p in [
-        "prestamo socio", "préstamo socio", "prestamo de socio", "préstamo de socio"
+        "prestamo socio", "prestamo socio", "prestamo de socio", "prestamo de socio"
     ]):
         return "prestamo_socio"
 
     if any(p in t for p in [
-        "prestamo banco", "préstamo banco", "prestamo bancario", "préstamo bancario"
+        "prestamo banco", "prestamo banco", "prestamo bancario", "prestamo bancario"
     ]):
         return "prestamo_bancario"
 
     if "intereses" in t:
         return "intereses"
 
-    if "comision" in t or "comisión" in t:
+    if "comision" in t or "comision" in t:
         return "gasto_bancario"
 
     return None
@@ -221,7 +221,7 @@ def extraer_tercero(texto):
 
 def extraer_igic(texto, igic_defecto=7.0):
     t = _texto_normalizado(texto)
-    m = re.search(r"(?:igic|iva)\s+(\d+(?:[.,]\d+)?)", t)
+    m = re.search(r"(:igic|iva)\s+(\d+(:[.,]\d+))", t)
     if m:
         return float(m.group(1).replace(",", "."))
     return float(igic_defecto)
@@ -327,18 +327,18 @@ def detectar_errores_lineas(lineas):
 
     for cuenta, movimiento, importe in lineas:
         if not cuenta:
-            errores.append("Hay una cuenta vacía")
+            errores.append("Hay una cuenta vacia")
         if movimiento not in ["debe", "haber"]:
-            errores.append(f"Movimiento inválido en {cuenta}")
+            errores.append(f"Movimiento invalido en {cuenta}")
         if importe is None:
-            errores.append(f"Importe vacío en {cuenta}")
+            errores.append(f"Importe vacio en {cuenta}")
             continue
 
         try:
             if float(importe) <= 0:
-                errores.append(f"Importe inválido en {cuenta}")
+                errores.append(f"Importe invalido en {cuenta}")
         except Exception:
-            errores.append(f"Importe no numérico en {cuenta}")
+            errores.append(f"Importe no numerico en {cuenta}")
 
     return errores
 
@@ -388,10 +388,10 @@ def registrar_asiento_compuesto(fecha, concepto, lineas, tipo_operacion):
             fecha=fecha,
             origen="operacion_inteligente",
             estado="rojo",
-            mensaje="Errores en líneas del asiento",
+            mensaje="Errores en lineas del asiento",
             detalle=" | ".join(errores),
         )
-        return {"ok": False, "mensaje": "Errores en las líneas del asiento", "errores": errores}
+        return {"ok": False, "mensaje": "Errores en las lineas del asiento", "errores": errores}
 
     if not validacion["cuadra"]:
         registrar_validacion_contable(
@@ -490,10 +490,10 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
             fecha=fecha,
             origen="operacion_inteligente",
             estado="rojo",
-            mensaje="Errores en líneas del asiento",
+            mensaje="Errores en lineas del asiento",
             detalle=" | ".join(errores),
         )
-        return {"ok": False, "mensaje": "Errores en las líneas del asiento", "errores": errores}
+        return {"ok": False, "mensaje": "Errores en las lineas del asiento", "errores": errores}
 
     if not validacion["cuadra"]:
         registrar_validacion_contable(
@@ -552,10 +552,10 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
             fecha=fecha,
             origen="operacion_inteligente",
             estado="rojo",
-            mensaje="Error al registrar operación completa",
+            mensaje="Error al registrar operacion completa",
             detalle=str(e),
         )
-        return {"ok": False, "mensaje": f"Error al registrar operación: {e}"}
+        return {"ok": False, "mensaje": f"Error al registrar operacion: {e}"}
 
     finally:
         conn.close()
@@ -564,8 +564,8 @@ def _registrar_operacion_y_asiento(fecha, concepto, lineas, tipo_operacion_asien
         fecha=fecha,
         origen="operacion_inteligente",
         estado="verde",
-        mensaje="Operación y asiento registrados correctamente",
-        detalle=f"Asiento ID {asiento_id} | Operación ID {operacion_id}",
+        mensaje="Operacion y asiento registrados correctamente",
+        detalle=f"Asiento ID {asiento_id} | Operacion ID {operacion_id}",
     )
 
     return {
@@ -653,7 +653,7 @@ def registrar_vencimientos_multiples(
     numero_plazos
 ):
     if not fecha_operacion:
-        return {"ok": False, "mensaje": "Falta fecha de operación"}
+        return {"ok": False, "mensaje": "Falta fecha de operacion"}
 
     if not fecha_vencimiento_base:
         return {"ok": False, "mensaje": "Falta fecha de vencimiento base"}
@@ -677,7 +677,7 @@ def registrar_vencimientos_multiples(
         fecha_op = datetime.datetime.strptime(str(fecha_operacion), "%Y-%m-%d").date()
         fecha_base = datetime.datetime.strptime(str(fecha_vencimiento_base), "%Y-%m-%d").date()
     except Exception:
-        return {"ok": False, "mensaje": "Formato de fecha inválido para generar plazos"}
+        return {"ok": False, "mensaje": "Formato de fecha invalido para generar plazos"}
 
     diferencia_dias = (fecha_base - fecha_op).days
     if diferencia_dias <= 0:
@@ -799,7 +799,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             tipo = tipo_catalogo_regla
 
     if tipo == "desconocido":
-        return {"ok": False, "mensaje": "No se pudo detectar el tipo de operación"}
+        return {"ok": False, "mensaje": "No se pudo detectar el tipo de operacion"}
 
     importe_base = extraer_importe(texto)
     if importe_base is None:
@@ -919,7 +919,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
         tipo = "financiacion"
 
     if tipo == "desconocido":
-        return {"ok": False, "mensaje": "No se pudo detectar el tipo de operación"}
+        return {"ok": False, "mensaje": "No se pudo detectar el tipo de operacion"}
 
     importe_base = extraer_importe(texto)
     if importe_base is None:
@@ -988,7 +988,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
         if definicion:
             lineas = generar_lineas_desde_catalogo(definicion, contexto_catalogo)
         else:
-            return {"ok": False, "mensaje": "No se pudo resolver la operación financiera"}
+            return {"ok": False, "mensaje": "No se pudo resolver la operacion financiera"}
 
         resultado = _registrar_operacion_y_asiento(
             fecha=fecha,
@@ -1032,7 +1032,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
 
     if tipo == "compra":
         if existe_operacion_parecida_reciente(fecha, texto, total, "compra"):
-            return {"ok": False, "mensaje": "Ya existe una operación muy similar registrada. Revisa antes de duplicar."}
+            return {"ok": False, "mensaje": "Ya existe una operacion muy similar registrada. Revisa antes de duplicar."}
 
         if reparto_pago["es_mixto"]:
             importe_contado = round(float(reparto_pago.get("importe_contado") or 0), 2)
@@ -1111,7 +1111,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             nombre_proveedor = tercero
 
             if not nombre_proveedor or nombre_proveedor == "Tercero no identificado":
-                match = re.search(r"a\s+(.+?)\s+por", texto.lower())
+                match = re.search(r"a\s+(.+)\s+por", texto.lower())
                 if match:
                     nombre_proveedor = match.group(1).strip().upper()
                 else:
@@ -1141,7 +1141,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             if not resultado_vencimiento["ok"]:
                 return {
                     "ok": False,
-                    "mensaje": f"Operación registrada, pero falló el vencimiento: {resultado_vencimiento['mensaje']}"
+                    "mensaje": f"Operacion registrada, pero fallo el vencimiento: {resultado_vencimiento['mensaje']}"
                 }
 
         return {
@@ -1165,7 +1165,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
         }
     if tipo == "venta":
         if existe_operacion_parecida_reciente(fecha, texto, total, "venta"):
-            return {"ok": False, "mensaje": "Ya existe una operación muy similar registrada. Revisa antes de duplicar."}
+            return {"ok": False, "mensaje": "Ya existe una operacion muy similar registrada. Revisa antes de duplicar."}
 
         subtipo_ingreso = detectar_tipo_ingreso(texto)
         if subtipo_ingreso == "alquiler":
@@ -1254,7 +1254,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             nombre_cliente = tercero
 
             if not nombre_cliente or nombre_cliente == "Tercero no identificado":
-                match = re.search(r"a\s+(.+?)\s+por", texto.lower())
+                match = re.search(r"a\s+(.+)\s+por", texto.lower())
                 if match:
                     nombre_cliente = match.group(1).strip().upper()
                 else:
@@ -1283,7 +1283,7 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             if not resultado_vencimiento["ok"]:
                 return {
                     "ok": False,
-                    "mensaje": f"Operación registrada, pero falló el vencimiento: {resultado_vencimiento['mensaje']}"
+                    "mensaje": f"Operacion registrada, pero fallo el vencimiento: {resultado_vencimiento['mensaje']}"
                 }
 
         return {
@@ -1303,4 +1303,4 @@ def procesar_operacion_texto(texto, fecha, igic_defecto=7.0):
             "evento": evento,
         }
 
-    return {"ok": False, "mensaje": "Tipo no soportado todavía"}
+    return {"ok": False, "mensaje": "Tipo no soportado todavia"}

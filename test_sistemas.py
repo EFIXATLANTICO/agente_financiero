@@ -65,10 +65,10 @@ print("Libro diario OK:", len(diario) > 0)
 
 
 # =========================
-# TEST FACTURACIÓN
+# TEST FACTURACION
 # =========================
 
-print("\n--- TEST FACTURACIÓN ---")
+print("\n--- TEST FACTURACION ---")
 
 cliente = crear_cliente("Cliente Test")
 proveedor = crear_proveedor("Proveedor Test")
@@ -93,14 +93,14 @@ factura_c = registrar_factura_compra(
 
 facturas = obtener_facturas()
 
-print("Facturación OK:", len(facturas) >= 2)
+print("Facturacion OK:", len(facturas) >= 2)
 
 
 # =========================
-# TEST TESORERÍA
+# TEST TESORERIA
 # =========================
 
-print("\n--- TEST TESORERÍA ---")
+print("\n--- TEST TESORERIA ---")
 
 pendientes = obtener_facturas_pendientes()
 print("Pendientes iniciales:", len(pendientes))
@@ -122,10 +122,10 @@ print("Pendientes tras cobro/pago:", len(pendientes))
 print("\n--- TEST OPERACIONES INTELIGENTES ---")
 
 tests = [
-    "Compra de mercadería a Proveedor IA por 100 con igic 7 al contado",
+    "Compra de mercaderia a Proveedor IA por 100 con igic 7 al contado",
     "Venta de servicio a Cliente IA por 500 con igic 7 por transferencia",
-    "Aportación de socios por 10000",
-    "Comisión bancaria de 15"
+    "Aportacion de socios por 10000",
+    "Comision bancaria de 15"
 ]
 
 for t in tests:
@@ -148,7 +148,7 @@ cursor.execute("SELECT COUNT(*) FROM asientos")
 print("Asientos:", cursor.fetchone()[0])
 
 cursor.execute("SELECT COUNT(*) FROM lineas_asiento")
-print("Líneas:", cursor.fetchone()[0])
+print("Lineas:", cursor.fetchone()[0])
 
 cursor.execute("SELECT COUNT(*) FROM facturas")
 print("Facturas:", cursor.fetchone()[0])

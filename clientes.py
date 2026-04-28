@@ -18,7 +18,7 @@ def guardar_scoring_cliente(cliente_id, puntuacion, color, motivo, fecha_revisio
 
         cursor.execute("""
             INSERT INTO scoring_clientes (cliente_id, puntuacion, color, motivo, fecha_revision)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (, , , , )
         """, (cliente_id, puntuacion, color, motivo, fecha_revision))
 
         conn.commit()
@@ -38,16 +38,16 @@ def calcular_scoring_cliente(cliente_id):
         cursor.execute("""
             SELECT COALESCE(SUM(total), 0)
             FROM facturas
-            WHERE tercero_id = ?
+            WHERE tercero_id = 
               AND tipo = 'venta'
         """, (cliente_id,))
         total_facturado = float(cursor.fetchone()[0] or 0)
 
-        # 2. Número de facturas pendientes o parciales
+        # 2. Numero de facturas pendientes o parciales
         cursor.execute("""
             SELECT COUNT(*)
             FROM facturas
-            WHERE tercero_id = ?
+            WHERE tercero_id = 
               AND tipo = 'venta'
               AND estado IN ('pendiente', 'cobro_parcial')
         """, (cliente_id,))
@@ -57,17 +57,17 @@ def calcular_scoring_cliente(cliente_id):
         cursor.execute("""
             SELECT COALESCE(SUM(total), 0)
             FROM facturas
-            WHERE tercero_id = ?
+            WHERE tercero_id = 
               AND tipo = 'venta'
               AND estado IN ('pendiente', 'cobro_parcial')
         """, (cliente_id,))
         saldo_pendiente = float(cursor.fetchone()[0] or 0)
 
-        # 4. Antigüedad máxima de deuda
+        # 4. Antiguedad maxima de deuda
         cursor.execute("""
             SELECT MAX(julianday('now') - julianday(fecha_emision))
             FROM facturas
-            WHERE tercero_id = ?
+            WHERE tercero_id = 
               AND tipo = 'venta'
               AND estado IN ('pendiente', 'cobro_parcial')
         """, (cliente_id,))
@@ -89,14 +89,14 @@ def calcular_scoring_cliente(cliente_id):
 
     if dias_deuda > 90:
         puntuacion -= 35
-        motivos.append("Deuda antigua (+90 días)")
+        motivos.append("Deuda antigua (+90 dias)")
     elif dias_deuda > 45:
         puntuacion -= 15
-        motivos.append("Deuda media (+45 días)")
+        motivos.append("Deuda media (+45 dias)")
 
     if total_facturado < 1000:
         puntuacion -= 10
-        motivos.append("Histórico de negocio bajo")
+        motivos.append("Historico de negocio bajo")
 
     puntuacion = max(0, min(100, puntuacion))
 

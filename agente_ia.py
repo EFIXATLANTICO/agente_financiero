@@ -10,10 +10,10 @@ cursor = conexion.cursor()
 
 def buscar_o_crear_tercero(nombre, tipo):
 
-    cursor.execute("SELECT id FROM clientes WHERE nombre = ?", (nombre,))
+    cursor.execute("SELECT id FROM clientes WHERE nombre = ", (nombre,))
     cliente = cursor.fetchone()
 
-    cursor.execute("SELECT id FROM proveedores WHERE nombre = ?", (nombre,))
+    cursor.execute("SELECT id FROM proveedores WHERE nombre = ", (nombre,))
     proveedor = cursor.fetchone()
 
     if tipo == "venta":
@@ -21,7 +21,7 @@ def buscar_o_crear_tercero(nombre, tipo):
             return cliente[0]
 
         crear_cliente(nombre, "", "")
-        cursor.execute("SELECT id FROM clientes WHERE nombre = ?", (nombre,))
+        cursor.execute("SELECT id FROM clientes WHERE nombre = ", (nombre,))
         return cursor.fetchone()[0]
 
     if tipo == "compra":
@@ -29,7 +29,7 @@ def buscar_o_crear_tercero(nombre, tipo):
             return proveedor[0]
 
         crear_proveedor(nombre, "", "")
-        cursor.execute("SELECT id FROM proveedores WHERE nombre = ?", (nombre,))
+        cursor.execute("SELECT id FROM proveedores WHERE nombre = ", (nombre,))
         return cursor.fetchone()[0]
 
 
@@ -52,7 +52,7 @@ def interpretar_factura_texto(texto):
     base = None
     igic = None
 
-    numeros = re.findall(r"\d+(?:[.,]\d+)?", texto)
+    numeros = re.findall(r"\d+(:[.,]\d+)", texto)
 
     valores = []
     for n in numeros:
@@ -80,7 +80,7 @@ def interpretar_factura_texto(texto):
 def mostrar_interpretacion(texto):
     resultado = interpretar_factura_texto(texto)
 
-    print("\nINTERPRETACIÓN DE FACTURA\n")
+    print("\nINTERPRETACION DE FACTURA\n")
     print("Tipo detectado:", resultado["tipo"])
     print("Base detectada:", resultado["base"])
     print("IGIC detectado:", resultado["igic_porcentaje"])
@@ -127,4 +127,4 @@ def registrar_desde_texto(texto, fecha, nombre_tercero):
             cobrar_factura_venta(factura_id, fecha)
 
     else:
-        print("Tipo de operación no reconocido")
+        print("Tipo de operacion no reconocido")

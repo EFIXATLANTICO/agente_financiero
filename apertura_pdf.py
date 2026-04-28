@@ -24,7 +24,7 @@ def limpiar_numero_es(texto):
 def detectar_importe_linea(texto, etiqueta):
     for linea in texto.splitlines():
         if etiqueta.lower() in linea.lower():
-            numeros = re.findall(r"-?\d[\d\.]*,\d{2}", linea)
+            numeros = re.findall(r"-\d[\d\.]*,\d{2}", linea)
             if numeros:
                 return limpiar_numero_es(numeros[-1])
     return 0.0
@@ -43,10 +43,10 @@ def leer_balance_situacion_pdf(pdf_path):
         "inmovilizado_material": detectar_importe_linea(texto, "Inmovilizado material"),
         "inversiones_financieras_lp": detectar_importe_linea(texto, "Inversiones financieras a largo plazo"),
         "existencias": detectar_importe_linea(texto, "Existencias"),
-        "clientes": detectar_importe_linea(texto, "Clientes ventas y prestación de servicios"),
+        "clientes": detectar_importe_linea(texto, "Clientes ventas y prestacion de servicios"),
         "otros_deudores": detectar_importe_linea(texto, "Otros deudores"),
         "inversiones_financieras_cp": detectar_importe_linea(texto, "Inversiones financieras a corto plazo"),
-        "efectivo": detectar_importe_linea(texto, "Efectivo y otros activos líquidos"),
+        "efectivo": detectar_importe_linea(texto, "Efectivo y otros activos liquidos"),
 
         # PATRIMONIO NETO
         "capital": detectar_importe_linea(texto, "Capital"),
@@ -72,10 +72,10 @@ def leer_balance_situacion_pdf(pdf_path):
         "inmovilizado_material": detectar_importe_linea(texto, "II. Inmovilizado material"),
         "inversiones_financieras_lp": detectar_importe_linea(texto, "V. Inversiones financieras a largo plazo"),
         "existencias": detectar_importe_linea(texto, "II. Existencias"),
-        "clientes": detectar_importe_linea(texto, "1. Clientes ventas y prestación de servicios"),
+        "clientes": detectar_importe_linea(texto, "1. Clientes ventas y prestacion de servicios"),
         "otros_deudores": detectar_importe_linea(texto, "3. Otros deudores"),
         "inversiones_financieras_cp": detectar_importe_linea(texto, "V. Inversiones financieras a corto plazo"),
-        "efectivo": detectar_importe_linea(texto, "Efectivo y otros activos líquidos"),
+        "efectivo": detectar_importe_linea(texto, "Efectivo y otros activos liquidos"),
 
         # PATRIMONIO NETO
         "capital": detectar_importe_linea(texto, "1. Capital escriturado"),
@@ -102,7 +102,7 @@ def leer_balance_situacion_pdf(pdf_path):
 
 def generar_lineas_asiento_apertura(datos):
     """
-    Genera las líneas del asiento de apertura.
+    Genera las lineas del asiento de apertura.
     Regla:
     - activo positivo -> debe
     - patrimonio neto y pasivo -> haber
@@ -159,7 +159,7 @@ def generar_lineas_asiento_apertura(datos):
         lineas.append(("171 Deudas a largo plazo", "haber", datos["otras_deudas_lp"]))
 
     if datos["deudas_credito_cp"] > 0:
-        lineas.append(("520 Deudas a corto plazo con entidades de crédito", "haber", datos["deudas_credito_cp"]))
+        lineas.append(("520 Deudas a corto plazo con entidades de credito", "haber", datos["deudas_credito_cp"]))
 
     if datos["otras_deudas_cp"] > 0:
         lineas.append(("521 Otras deudas a corto plazo", "haber", datos["otras_deudas_cp"]))
@@ -172,7 +172,7 @@ def generar_lineas_asiento_apertura(datos):
 
     # Si bancos viene negativo, lo tratamos como deuda bancaria CP
     if datos["efectivo"] < 0:
-        lineas.append(("520 Deudas a corto plazo con entidades de crédito", "haber", abs(datos["efectivo"])))
+        lineas.append(("520 Deudas a corto plazo con entidades de credito", "haber", abs(datos["efectivo"])))
 
     return lineas
 
@@ -194,7 +194,7 @@ def registrar_asiento_apertura(fecha, concepto, lineas):
 
     cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (?, ?, ?)
+        VALUES (, , )
     """, (fecha, concepto, "asiento_apertura"))
 
     asiento_id = cursor.lastrowid
@@ -202,7 +202,7 @@ def registrar_asiento_apertura(fecha, concepto, lineas):
     for cuenta, movimiento, importe in lineas:
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
         """, (asiento_id, cuenta, movimiento, float(importe)))
 
     conn.commit()

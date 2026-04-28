@@ -24,7 +24,7 @@ def crear_cliente(nombre, nif="", direccion="", email="", telefono=""):
 
     cursor.execute("""
     INSERT INTO clientes (nombre, nif, direccion, email, telefono)
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (, , , , )
     """, (nombre, nif, direccion, email, telefono))
 
     conn.commit()
@@ -57,7 +57,7 @@ def crear_proveedor(nombre, nif="", direccion="", email="", telefono=""):
 
     cursor.execute("""
     INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (, , , , )
     """, (nombre, nif, direccion, email, telefono))
 
     conn.commit()
@@ -124,7 +124,7 @@ def ver_proveedores():
 
 
 # =========================
-# FACTURACIÓN
+# FACTURACION
 # =========================
 
 def generar_numero_factura(serie="F"):
@@ -136,7 +136,7 @@ def generar_numero_factura(serie="F"):
     cursor.execute("""
     SELECT COUNT(*)
     FROM facturas
-    WHERE serie = ?
+    WHERE serie = 
     """, (serie,))
 
     total = cursor.fetchone()[0] + 1
@@ -175,7 +175,7 @@ def registrar_factura(
         tercero_id = None
 
         if tipo == "venta":
-            cursor.execute("SELECT id FROM clientes WHERE nombre = ?", (nombre_tercero,))
+            cursor.execute("SELECT id FROM clientes WHERE nombre = ", (nombre_tercero,))
             fila = cursor.fetchone()
 
             if fila:
@@ -184,14 +184,14 @@ def registrar_factura(
                 cursor.execute(
                     """
                     INSERT INTO clientes (nombre, nif, direccion, email, telefono)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (, , , , )
                     """,
                     (nombre_tercero, nif_tercero or "", "", "", "")
                 )
                 tercero_id = cursor.lastrowid
 
         elif tipo == "compra":
-            cursor.execute("SELECT id FROM proveedores WHERE nombre = ?", (nombre_tercero,))
+            cursor.execute("SELECT id FROM proveedores WHERE nombre = ", (nombre_tercero,))
             fila = cursor.fetchone()
 
             if fila:
@@ -200,7 +200,7 @@ def registrar_factura(
                 cursor.execute(
                     """
                     INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                    VALUES (?, ?, ?, ?, ?)
+                    VALUES (, , , , )
                     """,
                     (nombre_tercero, nif_tercero or "", "", "", "")
                 )
@@ -233,7 +233,7 @@ def registrar_factura(
                 forma_pago,
                 observaciones
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (, , , , , , , , , , , , , , , , , , )
             """,
             (
                 tipo,
@@ -296,7 +296,7 @@ def registrar_factura(
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (, , )
             """,
             (fecha_operacion, concepto, tipo_asiento)
         )
@@ -306,7 +306,7 @@ def registrar_factura(
             cursor.execute(
                 """
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, ?, ?)
+                VALUES (, , , )
                 """,
                 (asiento_id, cuenta, movimiento, float(importe))
             )
@@ -315,7 +315,7 @@ def registrar_factura(
             cursor.execute(
                 """
                 INSERT INTO operaciones_asientos (operacion_id, asiento_id)
-                VALUES (?, ?)
+                VALUES (, )
                 """,
                 (factura_id, asiento_id)
             )
@@ -394,7 +394,7 @@ def registrar_factura_venta(
         forma_pago,
         observaciones
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (, , , , , , , , , , , , , , , , , , , )
     """, (
         None,
         "venta",
@@ -495,7 +495,7 @@ def generar_siguiente_numero_factura_venta():
     cursor.execute("""
         SELECT numero_factura
         FROM facturas
-        WHERE numero_factura LIKE ?
+        WHERE numero_factura LIKE 
         ORDER BY id DESC
         LIMIT 1
     """, (f"{prefijo}%",))
@@ -570,7 +570,7 @@ def crear_factura_venta(
                 forma_pago,
                 observaciones
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (, , , , , , , , , , , , , , , , )
         """, (
             "venta",
             nombre_cliente,
@@ -603,7 +603,7 @@ def crear_factura_venta(
                 total,
                 estado
             )
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (, , , , )
         """, (
             fecha_emision,
             concepto_asiento,
@@ -617,7 +617,7 @@ def crear_factura_venta(
         # Debe: cliente
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe, concepto)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (, , , , )
         """, (
             asiento_id,
             "430",
@@ -629,7 +629,7 @@ def crear_factura_venta(
         # Haber: ventas
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe, concepto)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (, , , , )
         """, (
             asiento_id,
             "700",
@@ -642,7 +642,7 @@ def crear_factura_venta(
         if totales["cuota_impuesto"] > 0:
             cursor.execute("""
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe, concepto)
-                VALUES (?, ?, ?, ?, ?)
+                VALUES (, , , , )
             """, (
                 asiento_id,
                 "477",
@@ -686,14 +686,14 @@ def marcar_factura_como_cobrada_y_registrar_cobro(factura_id, forma_pago="transf
                 numero_factura,
                 total
             FROM facturas
-            WHERE id = ?
+            WHERE id = 
             LIMIT 1
         """, (int(factura_id),))
 
         factura = cursor.fetchone()
 
         if not factura:
-            return {"ok": False, "mensaje": "No se encontró la factura."}
+            return {"ok": False, "mensaje": "No se encontro la factura."}
 
         factura_id_db, nombre_tercero, numero_factura, total = factura
         total = float(total or 0)
@@ -706,14 +706,14 @@ def marcar_factura_como_cobrada_y_registrar_cobro(factura_id, forma_pago="transf
         cursor.execute("""
             UPDATE facturas
             SET estado = 'pagada'
-            WHERE id = ?
+            WHERE id = 
         """, (int(factura_id_db),))
 
         concepto_asiento = f"Cobro factura {numero_factura} - {nombre_tercero}"
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (, , )
         """, (
             fecha_cobro,
             concepto_asiento,
@@ -723,7 +723,7 @@ def marcar_factura_como_cobrada_y_registrar_cobro(factura_id, forma_pago="transf
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
         """, (
             asiento_id,
             cuenta_tesoreria,
@@ -733,7 +733,7 @@ def marcar_factura_como_cobrada_y_registrar_cobro(factura_id, forma_pago="transf
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
         """, (
             asiento_id,
             CONFIG_EMPRESA["cuenta_clientes"],
@@ -745,7 +745,7 @@ def marcar_factura_como_cobrada_y_registrar_cobro(factura_id, forma_pago="transf
             cursor.execute("""
                 UPDATE vencimientos
                 SET estado = 'pagado'
-                WHERE factura_id = ?
+                WHERE factura_id = 
             """, (int(factura_id_db),))
         except Exception:
             pass
@@ -776,20 +776,20 @@ def registrar_cobro_factura(factura_id, fecha_cobro=None, forma_cobro="transfere
         cursor.execute("""
             SELECT id, numero_factura, nombre_tercero, total, estado
             FROM facturas
-            WHERE id = ?
+            WHERE id = 
             LIMIT 1
         """, (int(factura_id),))
 
         fila = cursor.fetchone()
 
         if not fila:
-            return {"ok": False, "mensaje": "No se encontró la factura."}
+            return {"ok": False, "mensaje": "No se encontro la factura."}
 
         factura_id_db, numero_factura, nombre_tercero, total, estado_actual = fila
         total = float(total or 0)
 
         if str(estado_actual).strip().lower() in ("pagada", "cobrada", "cobrado"):
-            return {"ok": False, "mensaje": "La factura ya está cobrada/pagada."}
+            return {"ok": False, "mensaje": "La factura ya esta cobrada/pagada."}
 
         forma_cobro = str(forma_cobro or "").strip().lower()
 
@@ -801,14 +801,14 @@ def registrar_cobro_factura(factura_id, fecha_cobro=None, forma_cobro="transfere
         cursor.execute("""
             UPDATE facturas
             SET estado = 'pagada'
-            WHERE id = ?
+            WHERE id = 
         """, (int(factura_id_db),))
 
         concepto_asiento = f"Cobro factura {numero_factura} - {nombre_tercero}"
 
         cursor.execute("""
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (, , )
         """, (
             str(fecha_cobro),
             concepto_asiento,
@@ -818,7 +818,7 @@ def registrar_cobro_factura(factura_id, fecha_cobro=None, forma_cobro="transfere
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
         """, (
             asiento_id,
             cuenta_tesoreria,
@@ -828,7 +828,7 @@ def registrar_cobro_factura(factura_id, fecha_cobro=None, forma_cobro="transfere
 
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
         """, (
             asiento_id,
             CONFIG_EMPRESA["cuenta_clientes"],
@@ -840,7 +840,7 @@ def registrar_cobro_factura(factura_id, fecha_cobro=None, forma_cobro="transfere
             cursor.execute("""
                 UPDATE vencimientos
                 SET estado = 'pagado'
-                WHERE factura_id = ?
+                WHERE factura_id = 
             """, (int(factura_id_db),))
         except Exception:
             pass

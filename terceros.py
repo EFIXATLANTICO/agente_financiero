@@ -11,7 +11,7 @@ TABLAS_VALIDAS = {
 def _tabla_tipo(tipo):
     tipo = (tipo or "").strip().lower()
     if tipo not in TABLAS_VALIDAS:
-        raise ValueError("Tipo de tercero no válido")
+        raise ValueError("Tipo de tercero no valido")
     return TABLAS_VALIDAS[tipo]
 
 
@@ -244,7 +244,7 @@ def metricas_tercero(tipo, tercero_id):
             estado_final = "pagada"
             tipo_operacion = "compra"
 
-        # MÉTRICAS DESDE FACTURAS
+        # METRICAS DESDE FACTURAS
         cursor.execute(
             """
             SELECT
@@ -259,7 +259,7 @@ def metricas_tercero(tipo, tercero_id):
         )
         total_facturas, volumen_facturas, volumen_cerrado, saldo_pendiente = cursor.fetchone()
 
-        # MÉTRICAS DESDE OPERACIONES INTELIGENTES
+        # METRICAS DESDE OPERACIONES INTELIGENTES
         cursor.execute(
             """
             SELECT
@@ -306,7 +306,7 @@ def metricas_tercero(tipo, tercero_id):
             fila_pago_op = cursor.fetchone()
             forma_pago_habitual = fila_pago_op[0] if fila_pago_op else ""
 
-        # ÚLTIMAS FACTURAS
+        # ULTIMAS FACTURAS
         cursor.execute(
             """
             SELECT id, fecha_emision, concepto, total, estado, forma_pago
@@ -324,7 +324,7 @@ def metricas_tercero(tipo, tercero_id):
             columns=["ID", "Fecha", "Concepto", "Total", "Estado", "Forma pago"]
         ) if facturas else pd.DataFrame(columns=["ID", "Fecha", "Concepto", "Total", "Estado", "Forma pago"])
 
-        # ÚLTIMAS OPERACIONES
+        # ULTIMAS OPERACIONES
         cursor.execute(
             """
             SELECT id, fecha_operacion, concepto, total, forma_pago

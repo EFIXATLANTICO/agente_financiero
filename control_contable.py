@@ -4,7 +4,7 @@ from pgc import obtener_cuenta_pgc, normalizar_cuenta
 
 
 # =========================
-# REVISIÓN CONTABLE
+# REVISION CONTABLE
 # =========================
 
 def revisar_asientos():
@@ -38,28 +38,28 @@ def revisar_asientos():
         total_haber = 0.0
 
         # ------------------------
-        # VALIDACIÓN ESTRUCTURA
+        # VALIDACION ESTRUCTURA
         # ------------------------
         if len(lineas) < 2:
             incidencias.append([
                 asiento_id, fecha, concepto, tipo_operacion,
-                "Menos de 2 líneas"
+                "Menos de 2 lineas"
             ])
 
         for cuenta, movimiento, importe in lineas:
 
-            # Cuenta vacía
+            # Cuenta vacia
             if not cuenta or str(cuenta).strip() == "":
                 incidencias.append([
                     asiento_id, fecha, concepto, tipo_operacion,
-                    "Cuenta vacía"
+                    "Cuenta vacia"
                 ])
 
-            # Importe inválido
+            # Importe invalido
             if importe is None:
                 incidencias.append([
                     asiento_id, fecha, concepto, tipo_operacion,
-                    "Importe vacío"
+                    "Importe vacio"
                 ])
                 continue
 
@@ -68,7 +68,7 @@ def revisar_asientos():
             except Exception:
                 incidencias.append([
                     asiento_id, fecha, concepto, tipo_operacion,
-                    "Importe no numérico"
+                    "Importe no numerico"
                 ])
                 continue
 
@@ -86,7 +86,7 @@ def revisar_asientos():
             else:
                 incidencias.append([
                     asiento_id, fecha, concepto, tipo_operacion,
-                    "Movimiento no válido"
+                    "Movimiento no valido"
                 ])
 
         # ------------------------
@@ -121,7 +121,7 @@ def validar_sistema_completo():
 
     try:
         # =====================================================
-        # 1) ASIENTOS SIN LÍNEAS
+        # 1) ASIENTOS SIN LINEAS
         # =====================================================
         cursor.execute("""
             SELECT a.id, a.fecha, a.concepto, a.tipo_operacion
@@ -136,7 +136,7 @@ def validar_sistema_completo():
                 "asiento_id": asiento_id,
                 "fecha": str(fecha),
                 "concepto": str(concepto or ""),
-                "detalle": "El asiento no tiene líneas contables",
+                "detalle": "El asiento no tiene lineas contables",
                 "gravedad": "alta"
             })
 
@@ -168,7 +168,7 @@ def validar_sistema_completo():
             })
 
         # =====================================================
-        # 3) IMPORTES ABSURDOS EN LÍNEAS
+        # 3) IMPORTES ABSURDOS EN LINEAS
         # =====================================================
         cursor.execute("""
             SELECT
@@ -189,7 +189,7 @@ def validar_sistema_completo():
                 "asiento_id": asiento_id,
                 "fecha": str(fecha),
                 "concepto": str(concepto or ""),
-                "detalle": f"Importe muy alto en línea | Cuenta={cuenta} | Movimiento={movimiento} | Importe={float(importe):.2f}",
+                "detalle": f"Importe muy alto en linea | Cuenta={cuenta} | Movimiento={movimiento} | Importe={float(importe):.2f}",
                 "gravedad": "alta"
             })
 
@@ -307,7 +307,7 @@ def validar_sistema_completo():
         for asiento_id, fecha, concepto in devoluciones:
             concepto_txt = str(concepto or "")
             concepto_referencia = concepto_txt.replace(
-                "Devolución de fianza asociada a asiento",
+                "Devolucion de fianza asociada a asiento",
                 "Fianza asociada a asiento"
             )
 
@@ -326,7 +326,7 @@ def validar_sistema_completo():
                     "asiento_id": asiento_id,
                     "fecha": str(fecha),
                     "concepto": concepto_txt,
-                    "detalle": "Existe una devolución de fianza sin asiento previo de fianza recibida",
+                    "detalle": "Existe una devolucion de fianza sin asiento previo de fianza recibida",
                     "gravedad": "alta"
                 })
 
@@ -403,7 +403,7 @@ def reset_contabilidad():
 
         for asiento_id, fecha, concepto in devoluciones:
             concepto_txt = str(concepto or "")
-            concepto_referencia = concepto_txt.replace("Devolución de fianza asociada a asiento", "Fianza asociada a asiento")
+            concepto_referencia = concepto_txt.replace("Devolucion de fianza asociada a asiento", "Fianza asociada a asiento")
 
             cursor.execute("""
                 SELECT id
@@ -420,7 +420,7 @@ def reset_contabilidad():
                     "asiento_id": asiento_id,
                     "fecha": str(fecha),
                     "concepto": concepto_txt,
-                    "detalle": "Existe una devolución de fianza sin asiento previo de fianza recibida",
+                    "detalle": "Existe una devolucion de fianza sin asiento previo de fianza recibida",
                     "gravedad": "alta"
                 })
 

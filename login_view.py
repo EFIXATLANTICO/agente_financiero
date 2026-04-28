@@ -1,4 +1,4 @@
-﻿import os
+import os
 import psycopg2
 import streamlit as st
 from auth_empresas import autenticar, empresas_de_usuario
@@ -431,7 +431,7 @@ def pantalla_login():
 
     with st.form("form_login_efix", clear_on_submit=False):
         usuario = st.text_input("Usuario", autocomplete="username")
-        password = st.text_input("Contraseña", type="password", autocomplete="current-password")
+        password = st.text_input("Contrasena", type="password", autocomplete="current-password")
         enviar_login = st.form_submit_button("Entrar")
 
     if enviar_login:
@@ -442,7 +442,7 @@ def pantalla_login():
         password_limpio = (password or "").strip()
 
         if not usuario_limpio or not password_limpio:
-            st.warning("Introduce usuario y contraseña para acceder.")
+            st.warning("Introduce usuario y contrasena para acceder.")
             st.markdown('</div>', unsafe_allow_html=True)
             return
 
@@ -463,9 +463,9 @@ def pantalla_login():
                 st.rerun()
 
         if not user:
-            st.error("Usuario o contraseña incorrectos")
+            st.error("Usuario o contrasena incorrectos")
             st.markdown(
-                '<div class="login-mini">Revisa tus credenciales e inténtalo de nuevo.</div>',
+                '<div class="login-mini">Revisa tus credenciales e intentalo de nuevo.</div>',
                 unsafe_allow_html=True
             )
             st.markdown('</div>', unsafe_allow_html=True)

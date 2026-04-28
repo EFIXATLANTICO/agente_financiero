@@ -17,7 +17,7 @@ def crear_nueva_empresa(
     - activa su base de datos
     - inicializa las tablas de empresa
 
-    Devuelve un diccionario con toda la información relevante.
+    Devuelve un diccionario con toda la informacion relevante.
     """
 
     if not usuario_id:
@@ -58,7 +58,7 @@ def crear_nueva_empresa(
 
 def crear_empresa_para_usuario(usuario_id, nombre, nif="", email=""):
     """
-    Alias semántico más expresivo para usar desde vistas o flujos de alta.
+    Alias semantico mas expresivo para usar desde vistas o flujos de alta.
     """
     return crear_nueva_empresa(
         usuario_id=usuario_id,

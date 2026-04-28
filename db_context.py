@@ -39,7 +39,7 @@ def get_master_connection():
     errores = []
     destinos = []
 
-    # Prioridad 1: conexión directa. Es la ruta más estable ahora que el proyecto
+    # Prioridad 1: conexion directa. Es la ruta mas estable ahora que el proyecto
     # tiene IPv4 activo en Supabase.
     if "SUPABASE_DIRECT_HOST" in st.secrets:
         _add_destino(
@@ -49,7 +49,7 @@ def get_master_connection():
             _secret_text("SUPABASE_DIRECT_USER", "postgres"),
         )
 
-    # Prioridad 2: configuración principal. Puede ser directa o pooler según secrets.
+    # Prioridad 2: configuracion principal. Puede ser directa o pooler segun secrets.
     host_principal = _secret_text("SUPABASE_HOST")
     port_principal = _secret_int("SUPABASE_PORT", 5432)
     user_principal = _secret_text("SUPABASE_USER")
@@ -137,7 +137,7 @@ def obtener_empresa_id_activa():
 def set_active_db_path(path: str):
     ensure_dirs()
     if not path:
-        raise ValueError("La ruta de la base de datos no puede estar vacía.")
+        raise ValueError("La ruta de la base de datos no puede estar vacia.")
     os.environ["ACTIVE_DB_PATH"] = path
 
 

@@ -5,9 +5,9 @@ from config_empresa import CONFIG_EMPRESA
 
 PALABRAS_BASURA_TERCERO = [
     "a credito a",
-    "a crédito a",
+    "a credito a",
     "credito a",
-    "crédito a",
+    "credito a",
     "a contado a",
     "al contado a",
     "contado a",
@@ -54,10 +54,10 @@ def extraer_nombre_tercero_inteligente(texto):
     texto = texto or ""
 
     patrones = [
-        r"\ba\s+(?:cr[eé]dito\s+a\s+)?([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-&]+?)(?=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s+al\s+contado|\s+a\s+\d+\s*d[ií]as|\s*$)",
-        r"\bde\s+([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-&]+?)(?=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s+al\s+contado|\s+a\s+\d+\s*d[ií]as|\s*$)",
-        r"\bcliente\s+([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-&]+?)(?=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s*$)",
-        r"\bproveedor\s+([A-Za-zÁÉÍÓÚáéíóúÑñ0-9\s\.\-&]+?)(?=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s*$)",
+        r"\ba\s+(:cr[ee]dito\s+a\s+)([A-Za-zAEIOUaeiouNn0-9\s\.\-&]+)(=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s+al\s+contado|\s+a\s+\d+\s*d[ii]as|\s*$)",
+        r"\bde\s+([A-Za-zAEIOUaeiouNn0-9\s\.\-&]+)(=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s+al\s+contado|\s+a\s+\d+\s*d[ii]as|\s*$)",
+        r"\bcliente\s+([A-Za-zAEIOUaeiouNn0-9\s\.\-&]+)(=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s*$)",
+        r"\bproveedor\s+([A-Za-zAEIOUaeiouNn0-9\s\.\-&]+)(=\s+por\s+valor\s+de|\s+por\s+\d|\s+con\s+igic|\s+con\s+iva|\s*$)",
     ]
 
     for patron in patrones:
@@ -86,28 +86,28 @@ def detectar_familia_operacion(texto):
     if any(p in t for p in ["pago", "pagamos", "abonamos", "pagado"]):
         return "pago"
 
-    if any(p in t for p in ["aportacion socio", "aportación socio", "aportacion de socios", "aportación de socios"]):
+    if any(p in t for p in ["aportacion socio", "aportacion socio", "aportacion de socios", "aportacion de socios"]):
         return "aportacion_socios"
 
-    if any(p in t for p in ["ampliacion capital", "ampliación capital", "ampliacion de capital", "ampliación de capital"]):
+    if any(p in t for p in ["ampliacion capital", "ampliacion capital", "ampliacion de capital", "ampliacion de capital"]):
         return "ampliacion_capital"
 
-    if any(p in t for p in ["prestamo banco", "préstamo banco", "prestamo bancario", "préstamo bancario"]):
+    if any(p in t for p in ["prestamo banco", "prestamo banco", "prestamo bancario", "prestamo bancario"]):
         return "prestamo_bancario"
 
-    if any(p in t for p in ["prestamo socio", "préstamo socio", "prestamo de socio", "préstamo de socio"]):
+    if any(p in t for p in ["prestamo socio", "prestamo socio", "prestamo de socio", "prestamo de socio"]):
         return "prestamo_socio"
 
-    if any(p in t for p in ["comision bancaria", "comisión bancaria", "comision", "comisión"]):
+    if any(p in t for p in ["comision bancaria", "comision bancaria", "comision", "comision"]):
         return "gasto_bancario"
 
-    if any(p in t for p in ["nomina", "nómina"]):
+    if any(p in t for p in ["nomina", "nomina"]):
         return "nomina"
 
-    if any(p in t for p in ["seguro", "periodificacion", "periodificación", "gasto anticipado", "ingreso anticipado"]):
+    if any(p in t for p in ["seguro", "periodificacion", "periodificacion", "gasto anticipado", "ingreso anticipado"]):
         return "periodificacion"
 
-    if any(p in t for p in ["inmovilizado", "maquinaria", "vehiculo", "vehículo", "ordenador", "mobiliario"]):
+    if any(p in t for p in ["inmovilizado", "maquinaria", "vehiculo", "vehiculo", "ordenador", "mobiliario"]):
         return "inmovilizado"
 
     return "desconocido"
@@ -122,16 +122,16 @@ def detectar_forma_pago_avanzada(texto):
     if "transferencia" in t or "banco" in t or "transfer" in t:
         return "transferencia"
 
-    if "pagaré" in t or "pagare" in t:
+    if "pagare" in t or "pagare" in t:
         return "pagare"
 
     if "confirming" in t:
         return "confirming"
 
-    if "credito" in t or "crédito" in t or "aplazado" in t:
+    if "credito" in t or "credito" in t or "aplazado" in t:
         return "credito"
 
-    if re.search(r"\b\d+\s*d[ií]as\b", t):
+    if re.search(r"\b\d+\s*d[ii]as\b", t):
         return "credito"
 
     return "credito"
@@ -139,7 +139,7 @@ def detectar_forma_pago_avanzada(texto):
 
 def detectar_plazo_dias(texto):
     t = normalizar_texto_operacion(texto)
-    m = re.search(r"\b(\d+)\s*d[ií]as\b", t)
+    m = re.search(r"\b(\d+)\s*d[ii]as\b", t)
     if m:
         return int(m.group(1))
     return 0
@@ -194,7 +194,7 @@ def detectar_pago_mixto(texto, total):
         "la otra mitad a",
         "resto a",
         "resto a credito",
-        "resto a crédito",
+        "resto a credito",
     ]
 
     if (
@@ -210,8 +210,8 @@ def detectar_pago_mixto(texto, total):
         }
 
     # Caso 2: porcentaje al contado + resto aplazado
-    m_pct = re.search(r"(\d+(?:[.,]\d+)?)\s*%\s+(?:hoy\s+)?al\s+contado", t)
-    if m_pct and ("resto a" in t or "resto a credito" in t or "resto a crédito" in t or "otra parte a" in t):
+    m_pct = re.search(r"(\d+(:[.,]\d+))\s*%\s+(:hoy\s+)al\s+contado", t)
+    if m_pct and ("resto a" in t or "resto a credito" in t or "resto a credito" in t or "otra parte a" in t):
         pct = float(m_pct.group(1).replace(",", "."))
         contado = round(total * pct / 100, 2)
         credito = round(total - contado, 2)
@@ -222,8 +222,8 @@ def detectar_pago_mixto(texto, total):
         }
 
     # Caso 3: importe exacto al contado y resto aplazado
-    m_importe = re.search(r"(?:paga|abon[a-z]*|entrega)\s+(\d+(?:[.,]\d+)?)\s*(?:euros|€)?\s+(?:hoy\s+)?al\s+contado", t)
-    if m_importe and ("resto a" in t or "resto a credito" in t or "resto a crédito" in t):
+    m_importe = re.search(r"(:paga|abon[a-z]*|entrega)\s+(\d+(:[.,]\d+))\s*(:euros|)\s+(:hoy\s+)al\s+contado", t)
+    if m_importe and ("resto a" in t or "resto a credito" in t or "resto a credito" in t):
         contado = float(m_importe.group(1).replace(",", "."))
         credito = round(total - contado, 2)
 
@@ -243,7 +243,7 @@ def detectar_pago_mixto(texto, total):
 def detectar_periodificacion(texto):
     t = normalizar_texto_operacion(texto)
 
-    if any(p in t for p in ["periodificacion", "periodificación", "gasto anticipado", "ingreso anticipado"]):
+    if any(p in t for p in ["periodificacion", "periodificacion", "gasto anticipado", "ingreso anticipado"]):
         return True
 
     if "anual" in t and "pagado por adelantado" in t:
@@ -258,7 +258,7 @@ def detectar_subtipo_ingreso(texto):
     if "alquiler" in t or "arrendamiento" in t or "renting" in t:
         return "alquiler"
 
-    if any(p in t for p in ["servicio", "mantenimiento", "asesoria", "asesoría"]):
+    if any(p in t for p in ["servicio", "mantenimiento", "asesoria", "asesoria"]):
         return "servicio"
 
     if any(p in t for p in ["mercader", "producto", "venta"]):

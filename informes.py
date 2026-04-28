@@ -27,28 +27,28 @@ def nombre_grupo_cuenta(grupo):
         "113": "113 Reservas voluntarias",
         "118": "118 Aportaciones de socios o propietarios",
         "129": "129 Resultado del ejercicio",
-        "170": "170 Deudas a largo plazo con entidades de crédito",
+        "170": "170 Deudas a largo plazo con entidades de credito",
         "173": "173 Proveedores de inmovilizado a largo plazo",
         "180": "180 Fianzas recibidas a largo plazo",
 
         # Grupo 2
-        "200": "200 Investigación",
+        "200": "200 Investigacion",
         "203": "203 Propiedad industrial",
-        "206": "206 Aplicaciones informáticas",
+        "206": "206 Aplicaciones informaticas",
         "210": "210 Terrenos y bienes naturales",
         "211": "211 Construcciones",
-        "212": "212 Instalaciones técnicas",
+        "212": "212 Instalaciones tecnicas",
         "213": "213 Maquinaria",
         "214": "214 Utillaje",
         "215": "215 Otras instalaciones",
         "216": "216 Mobiliario",
-        "217": "217 Equipos para procesos de información",
+        "217": "217 Equipos para procesos de informacion",
         "218": "218 Elementos de transporte",
         "219": "219 Otro inmovilizado material",
         "260": "260 Fianzas constituidas a largo plazo",
 
         # Grupo 3
-        "300": "300 Mercaderías",
+        "300": "300 Mercaderias",
         "310": "310 Materias primas",
         "320": "320 Elementos y conjuntos incorporables",
 
@@ -63,32 +63,32 @@ def nombre_grupo_cuenta(grupo):
         "440": "440 Deudores",
         "460": "460 Anticipos de remuneraciones",
         "465": "465 Remuneraciones pendientes de pago",
-        "470": "470 Hacienda Pública, deudora por diversos conceptos",
-        "472": "472 Hacienda Pública, IGIC soportado",
-        "475": "475 Hacienda Pública, acreedora por conceptos fiscales",
+        "470": "470 Hacienda Publica, deudora por diversos conceptos",
+        "472": "472 Hacienda Publica, IGIC soportado",
+        "475": "475 Hacienda Publica, acreedora por conceptos fiscales",
         "476": "476 Organismos de la Seguridad Social, acreedores",
-        "477": "477 Hacienda Pública, IGIC repercutido",
+        "477": "477 Hacienda Publica, IGIC repercutido",
 
         # Grupo 5
-        "520": "520 Deudas a corto plazo con entidades de crédito",
+        "520": "520 Deudas a corto plazo con entidades de credito",
         "523": "523 Proveedores de inmovilizado a corto plazo",
         "551": "551 Cuenta corriente con socios y administradores",
-        "555": "555 Partidas pendientes de aplicación",
+        "555": "555 Partidas pendientes de aplicacion",
         "570": "570 Caja",
-        "572": "572 Bancos e instituciones de crédito c/c vista, euros",
+        "572": "572 Bancos e instituciones de credito c/c vista, euros",
 
         # Grupo 6
-        "600": "600 Compras de mercaderías",
+        "600": "600 Compras de mercaderias",
         "601": "601 Compras de materias primas",
         "606": "606 Descuentos sobre compras por pronto pago",
         "607": "607 Trabajos realizados por otras empresas",
-        "621": "621 Arrendamientos y cánones",
-        "622": "622 Reparaciones y conservación",
+        "621": "621 Arrendamientos y canones",
+        "622": "622 Reparaciones y conservacion",
         "623": "623 Servicios de profesionales independientes",
         "624": "624 Transportes",
         "625": "625 Primas de seguros",
         "626": "626 Servicios bancarios y similares",
-        "627": "627 Publicidad, propaganda y relaciones públicas",
+        "627": "627 Publicidad, propaganda y relaciones publicas",
         "628": "628 Suministros",
         "629": "629 Otros servicios",
         "631": "631 Otros tributos",
@@ -100,7 +100,7 @@ def nombre_grupo_cuenta(grupo):
         "678": "678 Gastos excepcionales",
 
         # Grupo 7
-        "700": "700 Ventas de mercaderías",
+        "700": "700 Ventas de mercaderias",
         "705": "705 Prestaciones de servicios",
         "706": "706 Descuentos sobre ventas por pronto pago",
         "708": "708 Devoluciones de ventas y operaciones similares",
@@ -213,7 +213,7 @@ def libro_mayor(cuenta_buscada=None):
                 l.importe
             FROM lineas_asiento l
             JOIN asientos a ON l.asiento_id = a.id
-            WHERE l.cuenta = ?
+            WHERE l.cuenta = 
             ORDER BY a.fecha, a.id, l.id
             """,
             (cuenta_buscada,),
@@ -274,7 +274,7 @@ def cuenta_resultados():
         resumen = pd.DataFrame(
             [
                 ["Importe neto cifra de negocios y otros ingresos", 0.0],
-                ["Gastos de explotación", 0.0],
+                ["Gastos de explotacion", 0.0],
                 ["Resultado del ejercicio", 0.0],
             ],
             columns=["Concepto PGC", "Importe"],
@@ -314,7 +314,7 @@ def cuenta_resultados():
     resumen = pd.DataFrame(
         [
             ["Importe neto cifra de negocios y otros ingresos", round(total_ingresos, 2)],
-            ["Gastos de explotación", round(total_gastos, 2)],
+            ["Gastos de explotacion", round(total_gastos, 2)],
             ["Resultado del ejercicio", resultado],
         ],
         columns=["Concepto PGC", "Importe"],

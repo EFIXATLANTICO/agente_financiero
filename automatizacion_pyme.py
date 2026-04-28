@@ -37,8 +37,8 @@ def acciones_sugeridas():
                     "Prioridad": "Alta",
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
-                    "Acción sugerida": "Enviar recordatorio de cobro",
-                    "Detalle": f"{dias} días desde la factura. Importe: {row['total']:.2f} €"
+                    "Accion sugerida": "Enviar recordatorio de cobro",
+                    "Detalle": f"{dias} dias desde la factura. Importe: {row['total']:.2f} "
                 })
             elif dias >= 7:
                 acciones.append({
@@ -46,8 +46,8 @@ def acciones_sugeridas():
                     "Prioridad": "Media",
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
-                    "Acción sugerida": "Revisar cobro pendiente",
-                    "Detalle": f"{dias} días desde la factura. Importe: {row['total']:.2f} €"
+                    "Accion sugerida": "Revisar cobro pendiente",
+                    "Detalle": f"{dias} dias desde la factura. Importe: {row['total']:.2f} "
                 })
     except Exception:
         pass
@@ -67,8 +67,8 @@ def acciones_sugeridas():
                 "Prioridad": "Media",
                 "Referencia": f"Factura {row['id']}",
                 "Tercero": row["nombre_tercero"],
-                "Acción sugerida": "Revisar pago a proveedor",
-                "Detalle": f"Importe pendiente: {row['total']:.2f} €"
+                "Accion sugerida": "Revisar pago a proveedor",
+                "Detalle": f"Importe pendiente: {row['total']:.2f} "
             })
     except Exception:
         pass
@@ -88,8 +88,8 @@ def acciones_sugeridas():
                 "Prioridad": "Alta",
                 "Referencia": f"Movimiento {row['id']}",
                 "Tercero": "-",
-                "Acción sugerida": "Conciliar movimiento bancario",
-                "Detalle": f"{row['fecha']} | {row['concepto']} | {row['importe']:.2f} €"
+                "Accion sugerida": "Conciliar movimiento bancario",
+                "Detalle": f"{row['fecha']} | {row['concepto']} | {row['importe']:.2f} "
             })
     except Exception:
         pass
@@ -97,7 +97,7 @@ def acciones_sugeridas():
     conn.close()
 
     if not acciones:
-        return pd.DataFrame(columns=["Tipo", "Prioridad", "Referencia", "Tercero", "Acción sugerida", "Detalle"])
+        return pd.DataFrame(columns=["Tipo", "Prioridad", "Referencia", "Tercero", "Accion sugerida", "Detalle"])
 
     return pd.DataFrame(acciones)
 
@@ -134,41 +134,41 @@ def generar_email_recordatorio_cobro(nombre_cliente, factura_id, importe, fecha_
     asunto = f"Recordatorio de pago - Factura {factura_id}"
     cuerpo = f"""Estimado/a {nombre_cliente},
 
-Le escribimos para recordarle que la factura {factura_id}, emitida con fecha {fecha_factura}, por importe de {importe:.2f} €, figura actualmente como pendiente de cobro.
+Le escribimos para recordarle que la factura {factura_id}, emitida con fecha {fecha_factura}, por importe de {importe:.2f} , figura actualmente como pendiente de cobro.
 
-Le agradeceríamos que revisara el estado del pago y, en caso de estar ya realizado, nos lo indicara para actualizar nuestro registro.
+Le agradeceriamos que revisara el estado del pago y, en caso de estar ya realizado, nos lo indicara para actualizar nuestro registro.
 
-Quedamos a su disposición para cualquier aclaración.
+Quedamos a su disposicion para cualquier aclaracion.
 
 Un saludo,
-Administración
+Administracion
 """
     return asunto, cuerpo
 
 
 def generar_email_envio_factura(nombre_cliente, factura_id, importe, fecha_factura):
-    asunto = f"Envío de factura {factura_id}"
+    asunto = f"Envio de factura {factura_id}"
     cuerpo = f"""Estimado/a {nombre_cliente},
 
-Le remitimos la factura {factura_id}, de fecha {fecha_factura}, por importe de {importe:.2f} €.
+Le remitimos la factura {factura_id}, de fecha {fecha_factura}, por importe de {importe:.2f} .
 
-Quedamos a su disposición para cualquier consulta.
+Quedamos a su disposicion para cualquier consulta.
 
 Un saludo,
-Administración
+Administracion
 """
     return asunto, cuerpo
 
 
 def generar_email_proveedor(nombre_proveedor, factura_id, importe, fecha_factura):
-    asunto = f"Revisión de factura de proveedor {factura_id}"
+    asunto = f"Revision de factura de proveedor {factura_id}"
     cuerpo = f"""Estimado/a {nombre_proveedor},
 
-Estamos revisando la factura {factura_id}, con fecha {fecha_factura}, por importe de {importe:.2f} €.
+Estamos revisando la factura {factura_id}, con fecha {fecha_factura}, por importe de {importe:.2f} .
 
-Le agradeceríamos confirmación del estado o cualquier aclaración adicional que considere necesaria.
+Le agradeceriamos confirmacion del estado o cualquier aclaracion adicional que considere necesaria.
 
 Un saludo,
-Administración
+Administracion
 """
     return asunto, cuerpo

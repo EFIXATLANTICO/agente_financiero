@@ -10,7 +10,7 @@ def crear_asiento_apertura(df, fecha="2024-01-01", concepto="Asiento de apertura
     # crear asiento
     cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (?, ?, ?)
+        VALUES (, , )
     """, (fecha, concepto, "apertura"))
 
     asiento_id = cursor.lastrowid
@@ -24,14 +24,14 @@ def crear_asiento_apertura(df, fecha="2024-01-01", concepto="Asiento de apertura
 
             cursor.execute("""
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, 'debe', ?)
+                VALUES (, , 'debe', )
             """, (asiento_id, cuenta, abs(saldo)))
 
         else:
 
             cursor.execute("""
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, 'haber', ?)
+                VALUES (, , 'haber', )
             """, (asiento_id, cuenta, abs(saldo)))
 
     conexion.commit()

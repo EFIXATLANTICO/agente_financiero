@@ -24,7 +24,7 @@ def contiene_todas(texto, palabras):
 
 FAMILIAS_OPERACION = {
     # =========================================================
-    # COMPRAS DE EXISTENCIAS / MERCADERÍAS
+    # COMPRAS DE EXISTENCIAS / MERCADERIAS
     # =========================================================
     "compra_mercaderias": {
         "aliases": [
@@ -122,7 +122,7 @@ FAMILIAS_OPERACION = {
             "constitucion de fianza",
         ],
         "keywords_any": [
-            "fianza", "deposito", "depósito", "entregada"
+            "fianza", "deposito", "deposito", "entregada"
         ],
         "keywords_all": [
             ["fianza", "entregada"],
@@ -148,7 +148,7 @@ FAMILIAS_OPERACION = {
             "fianza de cliente recibida",
         ],
         "keywords_any": [
-            "fianza", "deposito", "depósito", "recibida"
+            "fianza", "deposito", "deposito", "recibida"
         ],
         "keywords_all": [
             ["fianza", "recibida"],
@@ -174,7 +174,7 @@ FAMILIAS_OPERACION = {
             "concesion de prestamo bancario",
         ],
         "keywords_any": [
-            "prestamo", "préstamo", "bancario", "banco"
+            "prestamo", "prestamo", "bancario", "banco"
         ],
         "keywords_all": [
             ["prestamo", "banco"],
@@ -200,7 +200,7 @@ FAMILIAS_OPERACION = {
             "pago del principal del prestamo",
         ],
         "keywords_any": [
-            "devolucion", "amortizacion", "amortización", "principal", "prestamo", "préstamo"
+            "devolucion", "amortizacion", "amortizacion", "principal", "prestamo", "prestamo"
         ],
         "keywords_all": [
             ["principal", "prestamo"],
@@ -227,7 +227,7 @@ FAMILIAS_OPERACION = {
             "liquidacion de intereses",
         ],
         "keywords_any": [
-            "intereses", "interes", "prestamo", "préstamo", "bancarios"
+            "intereses", "interes", "prestamo", "prestamo", "bancarios"
         ],
         "keywords_all": [
             ["intereses", "prestamo"],
@@ -272,7 +272,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "compra",
             "subtipo": "inmovilizado_intangible",
-            "cuenta_activo": "206 Aplicaciones informáticas",
+            "cuenta_activo": "206 Aplicaciones informaticas",
         },
         "plantilla": {
             "lineas": [
@@ -328,7 +328,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "compra",
             "subtipo": "inmovilizado",
-            "cuenta_activo": "217 Equipos para procesos de información",
+            "cuenta_activo": "217 Equipos para procesos de informacion",
         },
         "plantilla": {
             "lineas": [
@@ -446,7 +446,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "compra",
             "subtipo": "inmovilizado",
-            "cuenta_activo": "212 Instalaciones técnicas",
+            "cuenta_activo": "212 Instalaciones tecnicas",
         },
         "plantilla": {
             "lineas": [
@@ -498,7 +498,7 @@ FAMILIAS_OPERACION = {
     },
 
     # =========================================================
-    # GASTOS DE EXPLOTACIÓN
+    # GASTOS DE EXPLOTACION
     # =========================================================
     "gasto_arrendamientos": {
         "aliases": [
@@ -521,7 +521,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "compra",
             "subtipo": "gasto",
-            "cuenta_gasto": "621 Arrendamientos y cánones",
+            "cuenta_gasto": "621 Arrendamientos y canones",
         },
         "plantilla": {
             "lineas": [
@@ -554,7 +554,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "compra",
             "subtipo": "gasto",
-            "cuenta_gasto": "622 Reparaciones y conservación",
+            "cuenta_gasto": "622 Reparaciones y conservacion",
         },
         "plantilla": {
             "lineas": [
@@ -579,9 +579,9 @@ FAMILIAS_OPERACION = {
             "factura auditoria",
         ],
         "keywords_any": [
-            "asesoria", "asesoría", "asesoria fiscal", "gestoria",
-            "gestoría", "abogado", "consultoria", "consultoría",
-            "honorarios", "notaria", "notaría", "auditoria", "auditoría"
+            "asesoria", "asesoria", "asesoria fiscal", "gestoria",
+            "gestoria", "abogado", "consultoria", "consultoria",
+            "honorarios", "notaria", "notaria", "auditoria", "auditoria"
         ],
         "keywords_all": [
             ["factura", "asesoria"],
@@ -615,8 +615,8 @@ FAMILIAS_OPERACION = {
             "transporte de mercaderias",
         ],
         "keywords_any": [
-            "transporte", "portes", "mensajeria", "mensajería",
-            "envio", "envíos", "paqueteria", "paquetería"
+            "transporte", "portes", "mensajeria", "mensajeria",
+            "envio", "envios", "paqueteria", "paqueteria"
         ],
         "keywords_all": [
             ["factura", "transporte"],
@@ -648,7 +648,7 @@ FAMILIAS_OPERACION = {
             "seguro de responsabilidad civil",
         ],
         "keywords_any": [
-            "seguro", "seguros", "prima", "poliza", "póliza"
+            "seguro", "seguros", "prima", "poliza", "poliza"
         ],
         "keywords_all": [
             ["factura", "seguro"],
@@ -678,7 +678,7 @@ FAMILIAS_OPERACION = {
             "comision mantenimiento cuenta",
         ],
         "keywords_any": [
-            "comision", "comisión", "bancaria", "bancario",
+            "comision", "comision", "bancaria", "bancario",
             "gastos bancarios"
         ],
         "keywords_all": [
@@ -702,7 +702,7 @@ FAMILIAS_OPERACION = {
         "aliases": [
             "factura de publicidad",
             "factura publicidad",
-            "campaña publicitaria",
+            "campana publicitaria",
             "google ads",
             "facebook ads",
             "meta ads",
@@ -711,17 +711,17 @@ FAMILIAS_OPERACION = {
             "servicios de publicidad",
         ],
         "keywords_any": [
-            "publicidad", "marketing", "campaña", "ads", "anuncio"
+            "publicidad", "marketing", "campana", "ads", "anuncio"
         ],
         "keywords_all": [
             ["factura", "publicidad"],
             ["servicio", "publicidad"],
-            ["campaña", "publicitaria"],
+            ["campana", "publicitaria"],
         ],
         "reglas": {
             "tipo": "compra",
             "subtipo": "gasto",
-            "cuenta_gasto": "627 Publicidad, propaganda y relaciones públicas",
+            "cuenta_gasto": "627 Publicidad, propaganda y relaciones publicas",
         },
         "plantilla": {
             "lineas": [
@@ -744,13 +744,13 @@ FAMILIAS_OPERACION = {
             "factura internet",
             "factura de telefono",
             "factura telefono",
-            "factura de móvil",
+            "factura de movil",
             "factura movil",
             "recibo de suministros",
         ],
         "keywords_any": [
             "luz", "agua", "electricidad", "internet", "telefono",
-            "teléfono", "movil", "móvil", "fibra", "suministro", "suministros"
+            "telefono", "movil", "movil", "fibra", "suministro", "suministros"
         ],
         "keywords_all": [
             ["factura", "luz"],
@@ -784,7 +784,7 @@ FAMILIAS_OPERACION = {
             "factura plataforma",
         ],
         "keywords_any": [
-            "limpieza", "vigilancia", "suscripcion", "suscripción",
+            "limpieza", "vigilancia", "suscripcion", "suscripcion",
             "plataforma", "servicios diversos", "gastos varios"
         ],
         "keywords_all": [
@@ -817,7 +817,7 @@ FAMILIAS_OPERACION = {
         ],
         "keywords_any": [
             "ibi", "tasas", "tasa", "tributos", "impuesto municipal",
-            "basura", "circulacion", "circulación"
+            "basura", "circulacion", "circulacion"
         ],
         "keywords_all": [
             ["pago", "ibi"],
@@ -849,7 +849,7 @@ FAMILIAS_OPERACION = {
             "cargo por intereses",
         ],
         "keywords_any": [
-            "intereses", "interes", "liquidacion de intereses", "préstamo", "prestamo"
+            "intereses", "interes", "liquidacion de intereses", "prestamo", "prestamo"
         ],
         "keywords_all": [
             ["pago", "intereses"],
@@ -916,8 +916,8 @@ FAMILIAS_OPERACION = {
             "honorarios facturados",
         ],
         "keywords_any": [
-            "servicio", "servicios", "prestacion", "prestación",
-            "mantenimiento", "honorarios", "consultoria", "consultoría"
+            "servicio", "servicios", "prestacion", "prestacion",
+            "mantenimiento", "honorarios", "consultoria", "consultoria"
         ],
         "keywords_all": [
             ["prestacion", "servicios"],
@@ -1037,7 +1037,7 @@ FAMILIAS_OPERACION = {
             "deposito entregado como fianza",
         ],
         "keywords_any": [
-            "fianza", "deposito", "depósito"
+            "fianza", "deposito", "deposito"
         ],
         "keywords_all": [
             ["fianza", "entregada"],
@@ -1064,7 +1064,7 @@ FAMILIAS_OPERACION = {
             "fianza de cliente recibida",
         ],
         "keywords_any": [
-            "fianza", "deposito", "depósito"
+            "fianza", "deposito", "deposito"
         ],
         "keywords_all": [
             ["fianza", "recibida"],
@@ -1084,7 +1084,7 @@ FAMILIAS_OPERACION = {
     },
 
     # =========================================================
-    # PRÉSTAMOS
+    # PRESTAMOS
     # =========================================================
     "prestamo_recibido_banco": {
         "aliases": [
@@ -1094,7 +1094,7 @@ FAMILIAS_OPERACION = {
             "recibimos un prestamo del banco",
         ],
         "keywords_any": [
-            "prestamo bancario", "préstamo bancario", "prestamo del banco", "préstamo del banco"
+            "prestamo bancario", "prestamo bancario", "prestamo del banco", "prestamo del banco"
         ],
         "keywords_all": [
             ["prestamo", "banco"],
@@ -1103,7 +1103,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "financiacion",
             "subtipo": "prestamo",
-            "cuenta_pasivo": "170 Deudas a largo plazo con entidades de crédito",
+            "cuenta_pasivo": "170 Deudas a largo plazo con entidades de credito",
         },
         "plantilla": {
             "lineas": [
@@ -1121,7 +1121,7 @@ FAMILIAS_OPERACION = {
             "reembolso de prestamo",
         ],
         "keywords_any": [
-            "amortizacion", "amortización", "principal", "prestamo", "préstamo", "cuota prestamo"
+            "amortizacion", "amortizacion", "principal", "prestamo", "prestamo", "cuota prestamo"
         ],
         "keywords_all": [
             ["amortizacion", "prestamo"],
@@ -1131,7 +1131,7 @@ FAMILIAS_OPERACION = {
         "reglas": {
             "tipo": "financiacion",
             "subtipo": "prestamo",
-            "cuenta_pasivo": "170 Deudas a largo plazo con entidades de crédito",
+            "cuenta_pasivo": "170 Deudas a largo plazo con entidades de credito",
         },
         "plantilla": {
             "lineas": [
@@ -1152,7 +1152,7 @@ FAMILIAS_OPERACION = {
             "socios aportan dinero",
         ],
         "keywords_any": [
-            "aportacion", "aportación", "socios", "socio"
+            "aportacion", "aportacion", "socios", "socio"
         ],
         "keywords_all": [
             ["aportacion", "socios"],
@@ -1179,7 +1179,7 @@ FAMILIAS_OPERACION = {
             "desembolso de capital",
         ],
         "keywords_any": [
-            "ampliacion", "ampliación", "capital", "desembolso"
+            "ampliacion", "ampliacion", "capital", "desembolso"
         ],
         "keywords_all": [
             ["ampliacion", "capital"],
@@ -1199,7 +1199,7 @@ FAMILIAS_OPERACION = {
     },
 
     # =========================================================
-    # NÓMINAS Y SEGURIDAD SOCIAL
+    # NOMINAS Y SEGURIDAD SOCIAL
     # =========================================================
     "nomina_sueldos_salarios": {
         "aliases": [
@@ -1210,7 +1210,7 @@ FAMILIAS_OPERACION = {
             "pago a trabajadores",
         ],
         "keywords_any": [
-            "nomina", "nómina", "sueldos", "salarios", "trabajadores"
+            "nomina", "nomina", "sueldos", "salarios", "trabajadores"
         ],
         "keywords_all": [
             ["pago", "nomina"],
@@ -1283,7 +1283,7 @@ def clasificar_desde_catalogo(texto):
             if contiene_todas(t, grupo):
                 puntuacion += 50
 
-        # refuerzos específicos
+        # refuerzos especificos
         if clave == "compra_inmovilizado_equipos_informaticos":
             if any(x in t for x in ["ordenador", "portatil", "pc", "monitor", "impresora", "servidor", "hardware"]):
                 puntuacion += 80

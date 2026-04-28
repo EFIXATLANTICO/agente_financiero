@@ -55,7 +55,7 @@ def resolver_cuenta_catalogo(codigo_cuenta, contexto):
         return CONFIG_EMPRESA["cuenta_clientes"]
 
     if codigo_cuenta == "cuenta_inmovilizado":
-        return contexto.get("cuenta_activo", "217 Equipos para procesos de información")
+        return contexto.get("cuenta_activo", "217 Equipos para procesos de informacion")
 
     if codigo_cuenta == "cuenta_gasto":
         return contexto.get("cuenta_gasto", "629 Otros servicios")
@@ -64,7 +64,7 @@ def resolver_cuenta_catalogo(codigo_cuenta, contexto):
         return contexto.get("cuenta_base", "629 Otros servicios")
 
     if codigo_cuenta == "cuenta_pasivo":
-        return contexto.get("cuenta_pasivo", "170 Deudas a largo plazo con entidades de crédito")
+        return contexto.get("cuenta_pasivo", "170 Deudas a largo plazo con entidades de credito")
 
     return codigo_cuenta
 
@@ -81,7 +81,7 @@ def resolver_cuenta_catalogo(codigo_cuenta, contexto):
         return "180 Fianzas recibidas a largo plazo"
 
     if codigo_cuenta == "cuenta_prestamo_lp":
-        return "170 Deudas a largo plazo con entidades de crédito"
+        return "170 Deudas a largo plazo con entidades de credito"
 
     if codigo_cuenta == "cuenta_intereses_deudas":
         return "662 Intereses de deudas"

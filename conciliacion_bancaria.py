@@ -160,7 +160,7 @@ def score_match(mov, fac):
         score += 0.10
     import re
 
-    # detectar número de factura en el concepto
+    # detectar numero de factura en el concepto
     numeros_mov = re.findall(r'\d+', str(mov["concepto"]))
     numeros_fac = re.findall(r'\d+', str(fac.get("numero", "")))
 
@@ -196,7 +196,7 @@ def sugerencias_ia(score_minimo=0.60):
                     "tipo_factura": f["tipo"],
                     "fecha_mov": m["fecha"],
                     "fecha_factura": f["fecha_emision"],
-                    "explicacion": f"Score {s} → importe + texto + fecha"
+                    "explicacion": f"Score {s}  importe + texto + fecha"
                 })
 
     df = pd.DataFrame(resultados)
@@ -223,7 +223,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
     cursor.execute("""
     SELECT id, sentido, estado_conciliacion, importe
     FROM movimientos_banco
-    WHERE id = ?
+    WHERE id = 
     """, (movimiento_id,))
     mov = cursor.fetchone()
 
@@ -235,7 +235,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
 
     if estado_conciliacion == "conciliado":
         conn.close()
-        raise ValueError("Ese movimiento ya está conciliado")
+        raise ValueError("Ese movimiento ya esta conciliado")
 
     total_aplicar = sum(float(i[1]) for i in facturas_importes)
 
@@ -246,7 +246,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
     cursor.execute("""
     INSERT INTO conciliaciones
     (movimiento_banco_id, fecha, score_ia, estado, observaciones)
-    VALUES (?, ?, ?, ?, ?)
+    VALUES (, , , , )
     """, (
         movimiento_id,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -261,7 +261,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         cursor.execute("""
         SELECT tipo, estado, total
         FROM facturas
-        WHERE id = ?
+        WHERE id = 
         """, (factura_id,))
         fila = cursor.fetchone()
 
@@ -275,7 +275,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         if estado_factura not in ["pendiente", "cobro_parcial", "pago_parcial"]:
             conn.rollback()
             conn.close()
-            raise ValueError(f"La factura {factura_id} no está pendiente ni parcial")
+            raise ValueError(f"La factura {factura_id} no esta pendiente ni parcial")
 
         if sentido == "ingreso" and tipo_factura != "venta":
             conn.rollback()
@@ -295,7 +295,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         cursor.execute("""
         SELECT COALESCE(SUM(importe_aplicado), 0)
         FROM conciliacion_detalle
-        WHERE factura_id = ?
+        WHERE factura_id = 
         """, (factura_id,))
         ya_aplicado = float(cursor.fetchone()[0] or 0)
 
@@ -312,13 +312,13 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
             conn.rollback()
             conn.close()
             raise ValueError(
-                f"El importe aplicado a la factura {factura_id} supera su pendiente real ({pendiente_factura:.2f} €)"
+                f"El importe aplicado a la factura {factura_id} supera su pendiente real ({pendiente_factura:.2f} )"
             )
 
         cursor.execute("""
         INSERT INTO conciliacion_detalle
         (conciliacion_id, factura_id, importe_aplicado)
-        VALUES (?, ?, ?)
+        VALUES (, , )
         """, (
             conciliacion_id,
             factura_id,
@@ -334,15 +334,15 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
 
         cursor.execute("""
         UPDATE facturas
-        SET estado = ?
-        WHERE id = ?
+        SET estado = 
+        WHERE id = 
         """, (nuevo_estado, factura_id))
 
     cursor.execute("""
     UPDATE movimientos_banco
     SET estado_conciliacion = 'conciliado',
         revisado = 1
-    WHERE id = ?
+    WHERE id = 
     """, (movimiento_id,))
 
     conn.commit()

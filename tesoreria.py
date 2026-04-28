@@ -16,7 +16,7 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
             """
             SELECT id, tipo, nombre_tercero, concepto, total, estado
             FROM facturas
-            WHERE id = ?
+            WHERE id = 
             """,
             (factura_id,)
         )
@@ -71,14 +71,14 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
             ]
 
         else:
-            return {"ok": False, "mensaje": "Tipo de factura no válido"}
+            return {"ok": False, "mensaje": "Tipo de factura no valido"}
 
         concepto_asiento = f"{tipo_asiento.upper()} factura {factura_id_db} - {nombre_tercero}"
 
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (, , )
             """,
             (fecha, concepto_asiento, tipo_asiento)
         )
@@ -88,7 +88,7 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
             cursor.execute(
                 """
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (?, ?, ?, ?)
+                VALUES (, , , )
                 """,
                 (asiento_id, cuenta, movimiento, float(importe_linea))
             )
@@ -114,8 +114,8 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
         cursor.execute(
             """
             UPDATE facturas
-            SET estado = ?, forma_pago = ?, observaciones = ?
-            WHERE id = ?
+            SET estado = , forma_pago = , observaciones = 
+            WHERE id = 
             """,
             (nuevo_estado, forma_pago, observaciones, factura_id_db)
         )
@@ -151,7 +151,7 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
             """
             SELECT id, factura_id, tipo, estado, importe, importe_pendiente
             FROM vencimientos
-            WHERE id = ?
+            WHERE id = 
             """,
             (vencimiento_id,)
         )
@@ -163,7 +163,7 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         id_venc, factura_id, tipo_venc, estado_venc, importe_total, importe_pendiente = fila
 
         if str(estado_venc).strip().lower() not in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]:
-            return {"ok": False, "mensaje": f"El vencimiento no está pendiente: {estado_venc}"}
+            return {"ok": False, "mensaje": f"El vencimiento no esta pendiente: {estado_venc}"}
 
         importe_total = float(importe_total or 0)
         importe_pendiente = float(importe_pendiente or importe_total)
@@ -202,7 +202,7 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (?, ?, ?)
+            VALUES (, , )
             """,
             (fecha, concepto, tipo_venc)
         )
@@ -238,8 +238,8 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         cursor.execute(
             """
             UPDATE vencimientos
-            SET estado = ?, importe_pendiente = ?
-            WHERE id = ?
+            SET estado = , importe_pendiente = 
+            WHERE id = 
             """,
             (nuevo_estado, nuevo_pendiente, id_venc)
         )

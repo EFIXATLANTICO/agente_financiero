@@ -149,7 +149,7 @@ def obtener_incidencias_importacion(estado=None, tipo_importacion=None):
     conn.close()
 
     return pd.DataFrame(filas, columns=[
-        "ID", "Importación ID", "Tipo", "Fila Excel", "Fecha",
+        "ID", "Importacion ID", "Tipo", "Fila Excel", "Fecha",
         "Concepto", "Detalle error", "Estado", "Datos JSON", "Creado en"
     ])
 
@@ -215,7 +215,7 @@ def _normalizar_nombre_columna(col):
     col = str(col).strip().lower()
     col = unicodedata.normalize("NFD", col)
     col = "".join(c for c in col if unicodedata.category(c) != "Mn")
-    col = col.replace("€", "eur")
+    col = col.replace("", "eur")
     col = col.replace("(", "").replace(")", "")
     col = col.replace(".", "")
     col = " ".join(col.split())
@@ -263,7 +263,7 @@ def buscar_o_crear_tercero_importacion(tipo_tercero, nombre):
         cursor.execute(
             f"""
             INSERT INTO {tabla} (nombre, nif, direccion, email, telefono)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (, , , , )
             """,
             (nombre.strip(), "", "", "", "")
         )
@@ -309,16 +309,16 @@ def sugerir_mapeo_columnas(df):
         return None
 
     mapeo = {
-        "fecha": buscar("fecha", "fecha factura", "fecha emision", "fecha emisión"),
-        "tercero": buscar("razon social", "razón social", "nombre", "empresa", "tercero", "cliente", "proveedor"),
-        "numero_factura": buscar("codigo", "código", "factura", "numero factura", "n factura"),
-        "concepto": buscar("concepto", "observaciones", "descripcion", "descripción"),
+        "fecha": buscar("fecha", "fecha factura", "fecha emision", "fecha emision"),
+        "tercero": buscar("razon social", "razon social", "nombre", "empresa", "tercero", "cliente", "proveedor"),
+        "numero_factura": buscar("codigo", "codigo", "factura", "numero factura", "n factura"),
+        "concepto": buscar("concepto", "observaciones", "descripcion", "descripcion"),
         "total": buscar("total", "importe"),
         "base": buscar("base imponible", "base"),
         "impuesto_pct": buscar("igic", "iva", "impuesto %", "tipo impuesto"),
         "cuota_impuesto": buscar("cuota impuesto", "impuesto", "igic cuota", "iva cuota"),
-        "forma_pago": buscar("forma pago", "forma de pago", "metodo pago", "método pago", "pago"),
-        "dias_vencimiento": buscar("vencimientos", "vencimiento", "dias", "días", "plazo"),
+        "forma_pago": buscar("forma pago", "forma de pago", "metodo pago", "metodo pago", "pago"),
+        "dias_vencimiento": buscar("vencimientos", "vencimiento", "dias", "dias", "plazo"),
         "fecha_vencimiento": buscar("fecha vencimiento"),
     }
 
@@ -392,7 +392,7 @@ def detectar_tipo_excel(df):
     if columnas_movimientos.issubset(columnas):
         return "movimientos"
 
-    # 👇 DETECCIÓN INTELIGENTE
+    #  DETECCION INTELIGENTE
     if tiene_fecha and tiene_total and tiene_cliente:
         return "facturas"
     # --- PAGOS PROVEEDOR / CARTERA DE PAGOS ---
@@ -446,7 +446,7 @@ def _texto_limpio(valor, default=""):
 
 def _normalizar_fecha_importacion(valor):
     if _es_vacio(valor):
-        raise ValueError("Fecha vacía")
+        raise ValueError("Fecha vacia")
 
     if isinstance(valor, datetime):
         return valor.strftime("%Y-%m-%d")
@@ -459,27 +459,27 @@ def _normalizar_fecha_importacion(valor):
     except Exception:
         texto = _texto_limpio(valor)
         if not texto:
-            raise ValueError("Fecha vacía")
-        raise ValueError(f"Fecha no válida: {texto}")
+            raise ValueError("Fecha vacia")
+        raise ValueError(f"Fecha no valida: {texto}")
 
 
 def _parsear_importe(valor):
     if _es_vacio(valor):
-        raise ValueError("Importe vacío")
+        raise ValueError("Importe vacio")
 
     if isinstance(valor, (int, float)) and not isinstance(valor, bool):
         return round(float(valor), 2)
 
     texto = str(valor).strip()
     if not texto or texto.lower() in {"nan", "none"}:
-        raise ValueError("Importe vacío")
+        raise ValueError("Importe vacio")
 
     negativo = False
     if texto.startswith("(") and texto.endswith(")"):
         negativo = True
         texto = texto[1:-1].strip()
 
-    texto = texto.replace("€", "").replace("EUR", "").replace("eur", "")
+    texto = texto.replace("", "").replace("EUR", "").replace("eur", "")
     texto = texto.replace(" ", "")
 
     if "," in texto and "." in texto:
@@ -493,7 +493,7 @@ def _parsear_importe(valor):
     try:
         importe = float(texto)
     except Exception as e:
-        raise ValueError(f"Importe no numérico: {valor}") from e
+        raise ValueError(f"Importe no numerico: {valor}") from e
 
     if negativo:
         importe *= -1
@@ -527,7 +527,7 @@ def _extraer_lineas_desde_fila(row):
             lineas.append((cuenta_haber, "debe", abs(importe_haber)))
 
     if not lineas:
-        raise ValueError("Fila sin líneas contables válidas")
+        raise ValueError("Fila sin lineas contables validas")
 
     return lineas
 
@@ -593,12 +593,12 @@ def registrar_importacion(tipo, nombre_archivo, hash_archivo):
         """, (importacion_id_existente,))
         total_asientos = cursor.fetchone()[0]
 
-        # Si ya tiene asientos vinculados, sí es duplicado real
+        # Si ya tiene asientos vinculados, si es duplicado real
         if total_asientos > 0:
             conn.close()
             return None, "duplicado"
 
-        # Si no tiene asientos, era una importación fallida/incompleta:
+        # Si no tiene asientos, era una importacion fallida/incompleta:
         # la borramos y permitimos reintentar
         cursor.execute("DELETE FROM importaciones WHERE id = %s", (importacion_id_existente,))
         conn.commit()
@@ -659,30 +659,30 @@ def _existe_factura_importada(cursor, empresa_id, tipo, numero_factura, nombre_t
 
 
 # =========================
-# CLASIFICACIÓN DE MOVIMIENTOS
+# CLASIFICACION DE MOVIMIENTOS
 # =========================
 
 def clasificar_movimiento(concepto, importe):
     concepto_norm = str(concepto).strip().lower()
     importe = float(importe)
 
-    if "amazon" in concepto_norm or "papeleria" in concepto_norm or "papelería" in concepto_norm:
+    if "amazon" in concepto_norm or "papeleria" in concepto_norm or "papeleria" in concepto_norm:
         return "compra", "600 Compras"
 
-    if "comision" in concepto_norm or "comisión" in concepto_norm or "gasto bancario" in concepto_norm:
+    if "comision" in concepto_norm or "comision" in concepto_norm or "gasto bancario" in concepto_norm:
         return "gasto_bancario", "626 Servicios bancarios"
 
     if "seguro" in concepto_norm:
         return "gasto", "625 Prima de seguros"
 
     if "alquiler" in concepto_norm or "renting" in concepto_norm:
-        return "gasto", "621 Arrendamientos y cánones"
+        return "gasto", "621 Arrendamientos y canones"
 
-    if "nomina" in concepto_norm or "nómina" in concepto_norm:
+    if "nomina" in concepto_norm or "nomina" in concepto_norm:
         return "gasto", "640 Sueldos y salarios"
 
     if "hacienda" in concepto_norm or "aeat" in concepto_norm:
-        return "gasto", "475 Hacienda Pública acreedora"
+        return "gasto", "475 Hacienda Publica acreedora"
 
     if "cliente" in concepto_norm or "cobro" in concepto_norm or importe > 0:
         return "ingreso", "700 Ventas"
@@ -715,12 +715,12 @@ def clasificar_dataframe_movimientos(df):
 
 
 # =========================
-# VALIDACIÓN DE ASIENTOS
+# VALIDACION DE ASIENTOS
 # =========================
 
 def validar_asiento_compuesto(lineas):
     if len(lineas) < 2:
-        return False, "El asiento tiene menos de 2 líneas"
+        return False, "El asiento tiene menos de 2 lineas"
 
     total_debe = 0.0
     total_haber = 0.0
@@ -728,7 +728,7 @@ def validar_asiento_compuesto(lineas):
     for cuenta, movimiento, importe in lineas:
         cuenta = _texto_limpio(cuenta)
         if not cuenta:
-            return False, "Hay una línea sin cuenta"
+            return False, "Hay una linea sin cuenta"
 
         try:
             importe = _parsear_importe(importe)
@@ -736,7 +736,7 @@ def validar_asiento_compuesto(lineas):
             return False, str(e)
 
         if importe < 0:
-            return False, "Hay una línea con importe negativo"
+            return False, "Hay una linea con importe negativo"
 
         movimiento = _texto_limpio(movimiento).lower()
         if movimiento == "debe":
@@ -744,7 +744,7 @@ def validar_asiento_compuesto(lineas):
         elif movimiento == "haber":
             total_haber += importe
         else:
-            return False, "Movimiento no válido"
+            return False, "Movimiento no valido"
 
     if round(total_debe, 2) != round(total_haber, 2):
         return False, f"Asiento descuadrado: debe {round(total_debe, 2)} / haber {round(total_haber, 2)}"
@@ -811,19 +811,19 @@ def importar_asientos_desde_excel(df, nombre_archivo, archivo_bytes):
 
         cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (?, ?, ?)
+        VALUES (, , )
         """, (fecha, concepto, "importado_excel"))
         asiento_id = cursor.lastrowid
 
         cursor.execute("""
         INSERT INTO asientos_importacion (importacion_id, asiento_id)
-        VALUES (?, ?)
+        VALUES (, )
         """, (importacion_id, asiento_id))
 
         for cuenta, movimiento, importe in lineas:
             cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (?, ?, ?, ?)
+            VALUES (, , , )
             """, (asiento_id, cuenta, movimiento, float(_parsear_importe(importe))))
 
         importados += 1
@@ -876,7 +876,7 @@ def importar_asientos_desde_excel(df, nombre_archivo, archivo_bytes):
 
             try:
                 fecha = _normalizar_fecha_importacion(row.get("fecha"))
-                concepto = _texto_limpio(row.get("concepto"), default="Importación Excel")
+                concepto = _texto_limpio(row.get("concepto"), default="Importacion Excel")
             except Exception as e:
                 registrar_error(fila_excel, _texto_limpio(row.get("fecha")), _texto_limpio(row.get("concepto")), str(e), dict(row))
                 continue
@@ -1130,12 +1130,12 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 fecha_vcto = pd.to_datetime(row.get("fec vcto"), errors="coerce")
 
                 if not razon:
-                    raise ValueError("La razón del proveedor está vacía")
+                    raise ValueError("La razon del proveedor esta vacia")
 
                 cursor.execute("""
                     SELECT id
                     FROM proveedores
-                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(?))
+                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM())
                     LIMIT 1
                 """, (razon,))
                 fila_proveedor = cursor.fetchone()
@@ -1145,7 +1145,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 else:
                     cursor.execute("""
                         INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                        VALUES (?, '', '', '', '')
+                        VALUES (, '', '', '', '')
                     """, (razon,))
                     proveedor_id = cursor.lastrowid
 
@@ -1179,7 +1179,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                         forma_pago,
                         observaciones
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (, , , , , , , , , , , )
                 """, (
                     "compra",
                     numero_factura,
@@ -1192,7 +1192,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                     float(total_factura),
                     estado_factura,
                     forma_pago,
-                    f"Proveedor: {razon} | Identificador: {identificador} | Código proveedor: {proveedor_codigo} | IGIC aplicado: {igic_pct}%"
+                    f"Proveedor: {razon} | Identificador: {identificador} | Codigo proveedor: {proveedor_codigo} | IGIC aplicado: {igic_pct}%"
                 ))
                 factura_id = cursor.lastrowid
 
@@ -1200,7 +1200,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
 
                 cursor.execute("""
                     INSERT INTO asientos (fecha, concepto, tipo_operacion)
-                    VALUES (?, ?, ?)
+                    VALUES (, , )
                 """, (
                     fecha_asiento,
                     concepto,
@@ -1210,26 +1210,26 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
 
                 cursor.execute("""
                     INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                    VALUES (?, ?)
+                    VALUES (, )
                 """, (importacion_id, asiento_id))
 
                 if importe >= 0:
                     lineas = [
                         ("600 Compras", "debe", float(base_imponible)),
-                        ("472 Hacienda Pública, IGIC soportado", "debe", float(cuota_igic)),
+                        ("472 Hacienda Publica, IGIC soportado", "debe", float(cuota_igic)),
                         ("400 Proveedores", "haber", float(total_factura)),
                     ]
                 else:
                     lineas = [
                         ("400 Proveedores", "debe", float(total_factura)),
                         ("609 Rappels por compras", "haber", float(base_imponible)),
-                        ("472 Hacienda Pública, IGIC soportado", "haber", float(cuota_igic)),
+                        ("472 Hacienda Publica, IGIC soportado", "haber", float(cuota_igic)),
                     ]
 
                 for cuenta_linea, movimiento, importe_linea in lineas:
                     cursor.execute("""
                         INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                        VALUES (?, ?, ?, ?)
+                        VALUES (, , , )
                     """, (
                         asiento_id,
                         cuenta_linea,
@@ -1251,7 +1251,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                             tipo,
                             nombre_tercero
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        VALUES (, , , , , , )
                     """, (
                         factura_id,
                         fecha_venc_txt,
@@ -1619,17 +1619,17 @@ def deshacer_ultima_importacion():
     cursor.execute("""
     SELECT asiento_id
     FROM asientos_importacion
-    WHERE importacion_id = ?
+    WHERE importacion_id = 
     """, (importacion_id,))
     asientos = cursor.fetchall()
 
     for fila in asientos:
         asiento_id = fila[0]
-        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ?", (asiento_id,))
-        cursor.execute("DELETE FROM asientos WHERE id = ?", (asiento_id,))
+        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ", (asiento_id,))
+        cursor.execute("DELETE FROM asientos WHERE id = ", (asiento_id,))
 
-    cursor.execute("DELETE FROM asientos_importacion WHERE importacion_id = ?", (importacion_id,))
-    cursor.execute("DELETE FROM importaciones WHERE id = ?", (importacion_id,))
+    cursor.execute("DELETE FROM asientos_importacion WHERE importacion_id = ", (importacion_id,))
+    cursor.execute("DELETE FROM importaciones WHERE id = ", (importacion_id,))
 
     conn.commit()
     conn.close()
@@ -1655,9 +1655,9 @@ def borrar_asientos_importados_excel():
 
     for fila in asientos:
         asiento_id = fila[0]
-        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ?", (asiento_id,))
-        cursor.execute("DELETE FROM asientos_importacion WHERE asiento_id = ?", (asiento_id,))
-        cursor.execute("DELETE FROM asientos WHERE id = ?", (asiento_id,))
+        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ", (asiento_id,))
+        cursor.execute("DELETE FROM asientos_importacion WHERE asiento_id = ", (asiento_id,))
+        cursor.execute("DELETE FROM asientos WHERE id = ", (asiento_id,))
 
     conn.commit()
     conn.close()
@@ -2001,7 +2001,7 @@ def _parsear_importe_excel(valor):
     if not texto:
         return 0.0
 
-    texto = texto.replace("€", "").replace("EUR", "").replace("eur", "").strip()
+    texto = texto.replace("", "").replace("EUR", "").replace("eur", "").strip()
 
     if "," in texto:
         texto = texto.replace(".", "").replace(",", ".")
@@ -2073,13 +2073,13 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                 forma_pago = str(row.get(col_forma_pago, "") or "").strip().lower() if col_forma_pago else "credito"
 
                 if pd.isna(fecha):
-                    raise ValueError("Fecha inválida")
+                    raise ValueError("Fecha invalida")
                 if not tercero:
-                    raise ValueError("Tercero vacío")
+                    raise ValueError("Tercero vacio")
 
                 total = round(_parsear_importe_excel(row.get(col_total, 0)), 2)
                 if total <= 0:
-                    raise ValueError("Total inválido")
+                    raise ValueError("Total invalido")
 
                 if col_base and pd.notna(row.get(col_base)):
                     base = round(_parsear_importe_excel(row.get(col_base, 0)), 2)
@@ -2124,7 +2124,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
 
                 if generar_asientos:
 
-                    # Determinar si es crédito o contado
+                    # Determinar si es credito o contado
                     es_credito = False
 
                     if col_dias_vto:
@@ -2136,7 +2136,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                         es_credito = True
 
                     if tipo_tercero == "cliente":
-                        # Decisión contable ventas
+                        # Decision contable ventas
                         if es_credito:
                             cuenta_contrapartida = "430 Clientes"
                         else:
@@ -2149,10 +2149,10 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
 
                         lineas = [
                             (cuenta_contrapartida, "debe", total),
-                            ("700 Ventas de mercaderías", "haber", base),
+                            ("700 Ventas de mercaderias", "haber", base),
                         ]
                         if cuota != 0:
-                            lineas.append(("477 Hacienda Pública, IGIC repercutido", "haber", cuota))
+                            lineas.append(("477 Hacienda Publica, IGIC repercutido", "haber", cuota))
 
                         asiento_id = crear_asiento_completo(
                             fecha=fecha_txt,
@@ -2177,7 +2177,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                         operacion_id = registrar_operacion_bd(datos_operacion, cursor=cursor)
 
                     else:
-                        # Decisión contable compras
+                        # Decision contable compras
                         if es_credito:
                             cuenta_contrapartida = "400 Proveedores"
                         else:
@@ -2188,9 +2188,9 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                             else:
                                 cuenta_contrapartida = "400 Proveedores"
 
-                        lineas = [("600 Compras de mercaderías", "debe", base)]
+                        lineas = [("600 Compras de mercaderias", "debe", base)]
                         if cuota != 0:
-                            lineas.append(("472 Hacienda Pública, IGIC soportado", "debe", cuota))
+                            lineas.append(("472 Hacienda Publica, IGIC soportado", "debe", cuota))
                         lineas.append((cuenta_contrapartida, "haber", total))
 
                         asiento_id = crear_asiento_completo(
@@ -2247,7 +2247,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                                 tipo,
                                 nombre_tercero
                             )
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                            VALUES (, , , , , , , )
                             """,
                             (
                                 empresa_id,
@@ -2326,7 +2326,7 @@ def limpiar_historico_importaciones():
         cursor.execute("DELETE FROM importaciones")
 
         conn.commit()
-        return {"ok": True, "mensaje": "Histórico de importaciones eliminado correctamente"}
+        return {"ok": True, "mensaje": "Historico de importaciones eliminado correctamente"}
 
     except Exception as e:
         conn.rollback()
@@ -2350,14 +2350,14 @@ def importar_linea_corregida(df, fila_excel, tercero, numero_factura, total, tip
         idx_df = fila_excel - 2
 
         if idx_df < 0 or idx_df >= len(df):
-            raise ValueError(f"No se encontró la fila Excel {fila_excel} en el documento cargado")
+            raise ValueError(f"No se encontro la fila Excel {fila_excel} en el documento cargado")
 
         row = df.iloc[idx_df]
 
         fecha_raw = row.get("fecha")
         fecha = pd.to_datetime(fecha_raw, errors="coerce")
         if pd.isna(fecha):
-            raise ValueError("La fecha de la fila no es válida")
+            raise ValueError("La fecha de la fila no es valida")
 
         fecha_txt = fecha.strftime("%Y-%m-%d")
 
@@ -2383,7 +2383,7 @@ def importar_linea_corregida(df, fila_excel, tercero, numero_factura, total, tip
         if es_abono:
             lineas = [
                 ("708 Devoluciones de ventas y operaciones similares", "debe", base),
-                ("477 Hacienda Pública, IGIC repercutido", "debe", cuota),
+                ("477 Hacienda Publica, IGIC repercutido", "debe", cuota),
                 ("430 Clientes", "haber", total_abs),
             ]
             tipo_operacion = "abono_importado_excel"
@@ -2398,8 +2398,8 @@ def importar_linea_corregida(df, fila_excel, tercero, numero_factura, total, tip
 
             lineas = [
                 (cuenta_contrapartida, "debe", total_abs),
-                ("700 Ventas de mercaderías", "haber", base),
-                ("477 Hacienda Pública, IGIC repercutido", "haber", cuota),
+                ("700 Ventas de mercaderias", "haber", base),
+                ("477 Hacienda Publica, IGIC repercutido", "haber", cuota),
             ]
             tipo_operacion = "factura_importada_excel"
             concepto_asiento = concepto or f"Factura importada {numero_factura} - {tercero}"
