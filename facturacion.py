@@ -495,7 +495,7 @@ def generar_siguiente_numero_factura_venta():
     cursor.execute("""
         SELECT numero_factura
         FROM facturas
-        WHERE numero_factura LIKE 
+        WHERE numero_factura LIKE %s
         ORDER BY id DESC
         LIMIT 1
     """, (f"{prefijo}%",))

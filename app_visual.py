@@ -4158,7 +4158,7 @@ def pantalla_facturas(cursor):
 def pantalla_nueva_factura_venta(cursor):
     st.markdown("""
         <div class="subnav-shell">
-            <div class="subnav-title">Nueva factura de venta</div>
+            <div class="subnav-title">CREAR FACTURA</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -6395,13 +6395,13 @@ def mostrar_bloque_facturacion(cursor):
 
     seccion = st.radio(
         "Subbloque",
-        ["Facturas", "Nueva factura venta", "Clientes", "Proveedores", "Vencimientos"],
+        ["Facturas", "CREAR FACTURA", "Clientes", "Proveedores", "Vencimientos"],
         horizontal=True
     )
 
     if seccion == "Facturas":
         pantalla_facturas(cursor)
-    elif seccion == "Nueva factura venta":
+    elif seccion == "CREAR FACTURA":
         pantalla_nueva_factura_venta(cursor)
     elif seccion == "Clientes":
         pantalla_clientes(cursor)
