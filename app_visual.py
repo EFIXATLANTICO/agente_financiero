@@ -47,7 +47,7 @@ try:
     from importador_excel import importar_movimientos_desde_excel
 except ImportError:
     def importar_movimientos_desde_excel(*args, **kwargs):
-        return "error: la funciA3n importar_movimientos_desde_excel no estA disponible en el archivo cargado"
+        return "error: la funcion importar_movimientos_desde_excel no esta disponible en el archivo cargado"
 
 from control_contable import validar_sistema_completo
 from contabilidad import borrar_asiento, reset_contabilidad
@@ -659,7 +659,7 @@ def generar_email_recordatorio_cobro(nombre_cliente, factura_id, importe, fecha_
         f"Estimado/a {nombre_cliente},\n\n"
         f"Le escribimos para recordarle que la factura {factura_id}, emitida con fecha {fecha_factura}, "
         f"por importe de {importe:.2f} a, figura actualmente como pendiente de cobro.\n\n"
-        f"Le agradecerAamos que revisara el estado del pago y, en caso de estar ya realizado, "
+        f"Le agradeceriamos que revisara el estado del pago y, en caso de estar ya realizado, "
         f"nos lo indicara para actualizar nuestro registro.\n\n"
         f"Quedamos a su disposicion para cualquier aclaracion.\n\n"
         f"Un saludo,\nAdministracion"
@@ -689,7 +689,7 @@ def generar_email_proveedor(nombre_proveedor, factura_id, importe, fecha_factura
         f"Estimado/a {nombre_proveedor},\n\n"
         f"Estamos revisando la factura {factura_id}, con fecha {fecha_factura}, "
         f"por importe de {importe:.2f} a.\n\n"
-        f"Le agradecerAamos confirmacion del estado o cualquier aclaracion adicional.\n\n"
+        f"Le agradeceriamos confirmacion del estado o cualquier aclaracion adicional.\n\n"
         f"Un saludo,\nAdministracion"
     )
 
@@ -2082,10 +2082,10 @@ def pantalla_fianzas_detectadas(cursor):
     col_reset_1, col_reset_2 = st.columns([1, 3])
 
     with col_reset_1:
-        if st.button("Y1 Limpiar selecciA3n", key="reset_estado_fianzas"):
+        if st.button("Limpiar seleccion", key="reset_estado_fianzas"):
             st.session_state["fianzas_marcadas_manualmente"] = {}
             st.session_state["fianzas_edicion_manual"] = {}
-            st.success("SelecciA3n y edicion manual limpiadas.")
+            st.success("Seleccion y edicion manual limpiadas.")
             st.rerun()
 
     # =========================
@@ -2325,7 +2325,7 @@ def pantalla_fianzas_detectadas(cursor):
     st.write(f"**Tipo sugerido:** {tipo_sugerido_edicion}")
     st.write(f"**Confianza:** {confianza_edicion}")
     if confianza_edicion.lower() == "alta":
-        st.success("Deteccion sA3lida.")
+        st.success("Deteccion solida.")
     elif confianza_edicion.lower() == "media":
         st.info("Deteccion razonable. Conviene revisar antes de crear.")
     else:
@@ -2538,7 +2538,7 @@ def pantalla_fianzas_detectadas(cursor):
             st.dataframe(pd.DataFrame(creados), use_container_width=True)
 
         if duplicados:
-            st.warning(f"{len(duplicados)} ya existAan y no se duplicaron.")
+            st.warning(f"{len(duplicados)} ya existian y no se duplicaron.")
             st.dataframe(pd.DataFrame(duplicados), use_container_width=True)
 
         if errores:
@@ -3485,7 +3485,7 @@ def sugerir_accion_incidencia(tipo_incidencia):
         "asiento_sin_lineas": "Revisar el origen del asiento. No tiene lineas contables y normalmente debe eliminarse o reconstruirse.",
         "asiento_descuadrado": "Revisar las lineas del asiento y corregir importes o movimientos hasta que Debe y Haber cuadren.",
         "importe_absurdo": "Revisar el concepto y el importe detectado. Puede haberse tomado un telAfono, DNI o referencia como importe.",
-        "cliente_saldo_acreedor": "Revisar cobros, abonos o facturas del cliente. Un cliente con saldo acreedor suele indicar una imputaciA3n anA3mala.",
+        "cliente_saldo_acreedor": "Revisar cobros, abonos o facturas del cliente. Un cliente con saldo acreedor suele indicar una imputacion anomala.",
         "proveedor_saldo_deudor": "Revisar pagos, anticipos o facturas del proveedor. Un proveedor con saldo deudor puede estar mal contabilizado.",
         "caja_negativa": "Revisar pagos en efectivo y faltantes de registro. La caja no deberia quedar en negativo.",
         "bancos_negativos": "Revisar movimientos bancarios, pagos duplicados o conciliaciones incorrectas.",
@@ -3555,9 +3555,10 @@ def pantalla_apertura_pdf():
 
 def formatear_importe_seguro(valor):
     try:
-        return f"{float(valor or 0):,.2f} a".replace(",", "X").replace(".", ",").replace("X", ".")
+        importe = f"{float(valor or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        return f"{importe} EUR"
     except:
-        return "0,00 a"
+        return "0,00 EUR"
 
 
 def estado_factura_visual(estado, fecha_vencimiento=None):
@@ -4158,7 +4159,7 @@ def pantalla_facturas(cursor):
 def pantalla_nueva_factura_venta(cursor):
     st.markdown("""
         <div class="subnav-shell">
-            <div class="subnav-title">CREAR FACTURA</div>
+            <div class="subnav-title">Crear factura</div>
         </div>
     """, unsafe_allow_html=True)
 
@@ -4169,7 +4170,7 @@ def pantalla_nueva_factura_venta(cursor):
 
         with col1:
             nombre_cliente = st.text_input("Cliente", key="fv_nombre_cliente")
-            fecha_emision = st.date_input("Fecha emisiA3n", key="fv_fecha_emision")
+            fecha_emision = st.date_input("Fecha emision", key="fv_fecha_emision")
             concepto = st.text_area("Concepto", key="fv_concepto")
 
         with col2:
@@ -4177,7 +4178,7 @@ def pantalla_nueva_factura_venta(cursor):
             fecha_vencimiento = st.date_input("Fecha vencimiento", key="fv_fecha_vencimiento")
             forma_pago = st.selectbox(
                 "Forma de pago",
-                ["TRANSFERENCIA", "EFECTIVO", "TARJETA", "BIZUM", "DOMICILIACIAN", "OTRO"],
+                ["TRANSFERENCIA", "EFECTIVO", "TARJETA", "BIZUM", "DOMICILIACION", "OTRO"],
                 key="fv_forma_pago"
             )
 
@@ -4258,14 +4259,14 @@ def pantalla_nueva_factura_venta(cursor):
                     f"Factura creada y cobrada correctamente. "
                     f"Factura ID {resultado['factura_id']} | "
                     f"Asiento factura ID {resultado['asiento_id']} | "
-                    f"Total {resultado['total']:.2f} a"
+                    f"Total {resultado['total']:.2f} EUR"
                 )
             else:
                 st.success(
                     f"Factura creada correctamente. "
                     f"Factura ID {resultado['factura_id']} | "
                     f"Asiento ID {resultado['asiento_id']} | "
-                    f"Total {resultado['total']:.2f} a"
+                    f"Total {resultado['total']:.2f} EUR"
                 )
 
             st.session_state["factura_seleccionada_id"] = resultado["factura_id"]
@@ -4561,7 +4562,7 @@ def pantalla_clientes(cursor):
                     else:
                         st.error(f"{icono} {titulo_estado}")
 
-                    st.write(f"**DecisiA3n recomendada:** {decision_txt}")
+                    st.write(f"**Decision recomendada:** {decision_txt}")
                     st.info(resultado_scoring["motivo"])
 
                     col_sc1, col_sc2, col_sc3 = st.columns(3)
@@ -4573,7 +4574,7 @@ def pantalla_clientes(cursor):
                         st.metric("Semaforo", resultado_scoring["color"].capitalize())
 
                     with col_sc3:
-                        st.metric("DecisiA3n", decision_txt)
+                        st.metric("Decision", decision_txt)
 
                     col_sc4, col_sc5, col_sc6 = st.columns(3)
 
@@ -5569,7 +5570,7 @@ def pantalla_registrar_operacion():
 
     texto = st.text_area(
         "Describe la operacion",
-        placeholder="Ejemplo: Compra de mercaderAa a Paquito Perez SL al contado por 100 euros"
+        placeholder="Ejemplo: Compra de mercaderia a Paquito Perez SL al contado por 100 euros"
     )
     fecha = st.text_input("Fecha (YYYY-MM-DD)", value=str(datetime.date.today()))
     igic_defecto = st.number_input(
@@ -6310,13 +6311,13 @@ def pantalla_laboral():
 def mostrar_bloque_inicio(cursor):
     st.markdown("## Y  Panel principal")
 
-    # 1. Mantienes TODO lo que ya tenAas
+    # 1. Mantienes TODO lo que ya tenias
     pantalla_panel_control()
 
     st.divider()
 
     # 2. Anadimos una capa mas profesional encima/sobre el resumen
-    st.markdown("## YS Resumen financiero ejecutivo")
+    st.markdown("## Resumen financiero ejecutivo")
 
     col1, col2 = st.columns([2, 1])
 
@@ -6395,13 +6396,13 @@ def mostrar_bloque_facturacion(cursor):
 
     seccion = st.radio(
         "Subbloque",
-        ["Facturas", "CREAR FACTURA", "Clientes", "Proveedores", "Vencimientos"],
+        ["Facturas", "Crear factura", "Clientes", "Proveedores", "Vencimientos"],
         horizontal=True
     )
 
     if seccion == "Facturas":
         pantalla_facturas(cursor)
-    elif seccion == "CREAR FACTURA":
+    elif seccion == "Crear factura":
         pantalla_nueva_factura_venta(cursor)
     elif seccion == "Clientes":
         pantalla_clientes(cursor)
@@ -6500,7 +6501,7 @@ def mostrar_app():
                 st.session_state["fondo_inicio_canarias"] = obtener_imagen_canarias_local()
                 st.rerun()
 
-        if st.button("Cerrar sesiA3n", use_container_width=True):
+        if st.button("Cerrar sesion", use_container_width=True):
             logout()
 
         st.markdown('</div>', unsafe_allow_html=True)
@@ -6622,13 +6623,13 @@ def _sugerencia_basica_incidencia(detalle_error, datos):
     if "haber no puede ser negativo" in detalle:
         return "Sugerencia: mover el importe al DEBE en positivo."
 
-    if "fecha no vAlida" in detalle or "fecha vacAa" in detalle:
+    if "fecha no valida" in detalle or "fecha vacia" in detalle:
         return "Sugerencia: corregir la fecha al formato YYYY-MM-DD."
 
     if "asiento descuadrado" in detalle:
         return "Sugerencia: revisar el conjunto de lineas del asiento y comprobar debe/haber."
 
-    if "importe vacAo" in detalle:
+    if "importe vacio" in detalle:
         return "Sugerencia: completar el importe faltante."
 
     if "importe no numerico" in detalle:
@@ -6799,7 +6800,7 @@ def pantalla_incidencias_importacion():
     if diferencia == 0 and cuenta_debe.strip() and cuenta_haber.strip():
         st.success("La correccion propuesta estA cuadrada y lista para aplicarse.")
     else:
-        st.warning("La correccion todavia no estA lista. Revisa cuentas e importes hasta que la diferencia sea 0,00 a.")
+        st.warning("La correccion todavia no esta lista. Revisa cuentas e importes hasta que la diferencia sea 0,00 EUR.")
 
     propuesta = {
         "fecha": fecha_corregida,
