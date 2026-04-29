@@ -6353,9 +6353,32 @@ def mostrar_bloque_inicio(cursor):
     # mostrar_alertas()
     # mostrar_ultimas_operaciones()
 
+def radio_persistente(label, opciones, key, query_key, horizontal=True):
+    valor_url = st.query_params.get(query_key)
+    valor_inicial = valor_url or st.session_state.get(key) or opciones[0]
+
+    if valor_inicial not in opciones:
+        valor_inicial = opciones[0]
+
+    if key not in st.session_state:
+        st.session_state[key] = valor_inicial
+
+    valor = st.radio(
+        label,
+        opciones,
+        key=key,
+        horizontal=horizontal
+    )
+
+    if st.query_params.get(query_key) != valor:
+        st.query_params[query_key] = valor
+
+    return valor
+
+
 def mostrar_bloque_contabilidad(cursor):
     st.markdown('<div class="block-chip">Contabilidad</div>', unsafe_allow_html=True)
-    seccion = st.radio(
+    seccion = radio_persistente(
         "Subbloque",
         [
             "Libro diario",
@@ -6367,6 +6390,8 @@ def mostrar_bloque_contabilidad(cursor):
             "Asiento de apertura",
             "Fianzas detectadas"
         ],
+        key="subbloque_contabilidad",
+        query_key="sub_contabilidad",
         horizontal=True
     )
 
@@ -6394,9 +6419,11 @@ def mostrar_bloque_contabilidad(cursor):
 def mostrar_bloque_facturacion(cursor):
     st.markdown('<div class="block-chip">Facturacion</div>', unsafe_allow_html=True)
 
-    seccion = st.radio(
+    seccion = radio_persistente(
         "Subbloque",
         ["Facturas", "Crear factura", "Clientes", "Proveedores", "Vencimientos"],
+        key="subbloque_facturacion",
+        query_key="sub_facturacion",
         horizontal=True
     )
 
@@ -6414,7 +6441,7 @@ def mostrar_bloque_facturacion(cursor):
 
 def mostrar_bloque_operaciones(cursor):
     st.markdown('<div class="block-chip">Operaciones e importacion</div>', unsafe_allow_html=True)
-    seccion = st.radio(
+    seccion = radio_persistente(
         "Subbloque",
         [
             "Registrar operacion",
@@ -6424,6 +6451,8 @@ def mostrar_bloque_operaciones(cursor):
             "Incidencias importacion",
             "Fianzas detectadas"
         ],
+        key="subbloque_operaciones",
+        query_key="sub_operaciones",
         horizontal=True
     )
 
@@ -6443,9 +6472,11 @@ def mostrar_bloque_operaciones(cursor):
 
 def mostrar_bloque_tesoreria():
     st.markdown('<div class="block-chip">Tesoreria y automatizacion</div>', unsafe_allow_html=True)
-    seccion = st.radio(
+    seccion = radio_persistente(
         "Subbloque",
         ["Conciliacion bancaria IA", "Automatizacion PYME"],
+        key="subbloque_tesoreria",
+        query_key="sub_tesoreria",
         horizontal=True
     )
 
@@ -6470,6 +6501,21 @@ def mostrar_app():
       st.stop()
     usuario = st.session_state["usuario"]
     empresa_activa = st.session_state["empresa_activa"]
+    bloques = [
+        "Inicio",
+        "Contabilidad",
+        "Facturacion",
+        "Operaciones",
+        "Tesoreria",
+        "Bancos y seguros",
+        "Trabajadores",
+        "Inmovilizado"
+    ]
+    bloque_url = st.query_params.get("view", "Inicio")
+    if bloque_url not in bloques:
+        bloque_url = "Inicio"
+    if "bloque_activo" not in st.session_state:
+        st.session_state["bloque_activo"] = bloque_url
 
     with st.sidebar:
         mostrar_logo_efix(width=150, centrado=True)
@@ -6477,18 +6523,12 @@ def mostrar_app():
         st.markdown("### Navegacion")
         bloque = st.radio(
             "Ir a",
-            [
-                "Inicio",
-                "Contabilidad",
-                "Facturacion",
-                "Operaciones",
-                "Tesoreria",
-                "Bancos y seguros",
-                "Trabajadores",
-                "Inmovilizado"
-            ],
+            bloques,
+            key="bloque_activo",
             label_visibility="collapsed"
         )
+        if st.query_params.get("view") != bloque:
+            st.query_params["view"] = bloque
         st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown('<div class="sidebar-card">', unsafe_allow_html=True)

@@ -4,6 +4,7 @@ from login_view import pantalla_login, pantalla_selector_empresa
 from app_visual import mostrar_app
 
 from db_context import get_master_connection
+from auth_empresas import obtener_sesion_usuario
 
 
 def pantalla_error_conexion(error):
@@ -87,6 +88,7 @@ def main():
 
 
 def _main():
+    restaurar_sesion_desde_url()
 
     # ----------------------------
     # LOGIN
@@ -110,6 +112,26 @@ def _main():
     # APP PRINCIPAL
     # ----------------------------
     mostrar_app()
+
+
+def restaurar_sesion_desde_url():
+    if "usuario" in st.session_state:
+        return
+
+    token = st.query_params.get("sid")
+    if not token:
+        return
+
+    sesion = obtener_sesion_usuario(token)
+    if not sesion:
+        st.query_params.clear()
+        return
+
+    st.session_state["session_token"] = token
+    st.session_state["usuario"] = sesion["usuario"]
+
+    if sesion.get("empresa"):
+        st.session_state["empresa_activa"] = sesion["empresa"]
 
 # ----------------------------
 # ENTRYPOINT

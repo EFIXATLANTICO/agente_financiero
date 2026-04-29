@@ -1,12 +1,39 @@
 import os
 import psycopg2
 import streamlit as st
-from auth_empresas import autenticar, empresas_de_usuario
+from auth_empresas import (
+    autenticar,
+    empresas_de_usuario,
+    crear_sesion_usuario,
+    actualizar_empresa_sesion,
+    cerrar_sesion_token,
+)
 from db_context import set_active_db_path, clear_active_db_path
 
 import glob
 import random
 import base64
+
+
+def _guardar_token_sesion(token):
+    if not token:
+        return
+
+    st.session_state["session_token"] = token
+    st.query_params["sid"] = token
+
+
+def _obtener_token_sesion():
+    token = st.session_state.get("session_token")
+    if token:
+        return token
+
+    token_url = st.query_params.get("sid")
+    if token_url:
+        st.session_state["session_token"] = token_url
+        return token_url
+
+    return None
 
 def _obtener_imagen_canarias_login():
     patrones = [
@@ -471,6 +498,8 @@ def pantalla_login():
             st.markdown('</div>', unsafe_allow_html=True)
             return
 
+        token = crear_sesion_usuario(user["id"], horas=8)
+        _guardar_token_sesion(token)
         st.session_state["usuario"] = user
         st.rerun()
 
@@ -494,6 +523,7 @@ def pantalla_selector_empresa():
     if len(filas) == 1:
         empresa = filas[0]
         st.session_state["empresa_activa"] = empresa
+        actualizar_empresa_sesion(_obtener_token_sesion(), empresa["id"])
         set_active_db_path(empresa["db_path"])
         st.rerun()
 
@@ -514,6 +544,7 @@ def pantalla_selector_empresa():
     if st.button("Continuar"):
         empresa = opciones[seleccion]
         st.session_state["empresa_activa"] = empresa
+        actualizar_empresa_sesion(_obtener_token_sesion(), empresa["id"])
         set_active_db_path(empresa["db_path"])
         st.rerun()
 
@@ -521,8 +552,12 @@ def pantalla_selector_empresa():
 
 
 def logout():
-    for key in ["usuario", "empresas_usuario", "empresa_activa"]:
+    token = _obtener_token_sesion()
+    cerrar_sesion_token(token)
+
+    for key in ["usuario", "empresas_usuario", "empresa_activa", "session_token"]:
         if key in st.session_state:
             del st.session_state[key]
+    st.query_params.clear()
     clear_active_db_path()
     st.rerun()
