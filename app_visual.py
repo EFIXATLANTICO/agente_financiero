@@ -542,6 +542,227 @@ def aplicar_estilo(modo="app"):
             border-top: 4px solid #ef4444;
         }
 
+        /* Refinamiento visual global */
+        :root {
+            --efix-ink: #102033;
+            --efix-muted: #64748b;
+            --efix-line: rgba(30, 64, 175, 0.10);
+            --efix-surface: rgba(255, 255, 255, 0.86);
+            --efix-surface-strong: rgba(255, 255, 255, 0.96);
+            --efix-blue: #2563eb;
+            --efix-sky: #0ea5e9;
+            --efix-teal: #14b8a6;
+            --efix-amber: #f59e0b;
+            --efix-shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+        }
+
+        * {
+            letter-spacing: 0 !important;
+        }
+
+        .stApp,
+        [data-testid="stAppViewContainer"] {
+            background:
+                linear-gradient(135deg, rgba(232, 244, 255, 0.92) 0%, rgba(247, 251, 255, 0.96) 42%, rgba(238, 247, 243, 0.92) 100%) !important;
+        }
+
+        .block-container {
+            max-width: 94%;
+            padding-top: 1.05rem !important;
+        }
+
+        section[data-testid="stSidebar"] {
+            background: rgba(248, 251, 255, 0.92) !important;
+            border-right: 1px solid var(--efix-line);
+            box-shadow: 14px 0 34px rgba(15, 23, 42, 0.06);
+        }
+
+        .sidebar-card {
+            border-radius: 16px;
+            background: var(--efix-surface-strong);
+            border: 1px solid var(--efix-line);
+            box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06);
+        }
+
+        .sidebar-card h3,
+        .sidebar-card h4 {
+            margin-top: 0 !important;
+            color: var(--efix-ink) !important;
+            font-weight: 900 !important;
+        }
+
+        section[data-testid="stSidebar"] [role="radiogroup"] label {
+            padding: 0.46rem 0.58rem;
+            border-radius: 12px;
+            margin-bottom: 0.12rem;
+            transition: background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+        }
+
+        section[data-testid="stSidebar"] [role="radiogroup"] label:hover {
+            background: rgba(219, 234, 254, 0.72);
+            transform: translateX(2px);
+        }
+
+        section[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(20, 184, 166, 0.12));
+            box-shadow: inset 3px 0 0 var(--efix-blue);
+        }
+
+        .block-chip {
+            border-radius: 12px;
+            background: rgba(219, 234, 254, 0.82);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            box-shadow: 0 8px 18px rgba(37, 99, 235, 0.07);
+            color: #1d4ed8;
+        }
+
+        .section-title {
+            font-size: 1.42rem;
+            color: var(--efix-ink);
+            margin-top: 0.2rem;
+            margin-bottom: 0.75rem;
+        }
+
+        div[data-testid="stForm"],
+        .soft-card,
+        .feature-card,
+        .chart-shell,
+        .status-card {
+            border-radius: 16px !important;
+            background: var(--efix-surface) !important;
+            border: 1px solid var(--efix-line) !important;
+            box-shadow: var(--efix-shadow) !important;
+        }
+
+        div[data-testid="stForm"] {
+            padding: 1rem 1rem 1.15rem 1rem;
+        }
+
+        input,
+        textarea,
+        [data-baseweb="select"] > div,
+        [data-baseweb="base-input"] {
+            border-radius: 12px !important;
+            background: rgba(248, 251, 255, 0.95) !important;
+            border-color: rgba(30, 64, 175, 0.10) !important;
+            box-shadow: none !important;
+        }
+
+        input:focus,
+        textarea:focus,
+        [data-baseweb="select"] > div:focus-within {
+            border-color: rgba(37, 99, 235, 0.34) !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10) !important;
+        }
+
+        .stButton > button,
+        .stDownloadButton > button,
+        button[kind="secondary"] {
+            border-radius: 12px !important;
+            border: 1px solid rgba(37, 99, 235, 0.14) !important;
+            background: rgba(255, 255, 255, 0.94) !important;
+            color: var(--efix-ink) !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06) !important;
+            min-height: 2.35rem;
+        }
+
+        .stButton > button:hover,
+        .stDownloadButton > button:hover {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.10), rgba(20, 184, 166, 0.10)) !important;
+            color: #1d4ed8 !important;
+            transform: translateY(-1px);
+        }
+
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0.45rem;
+            border-bottom: 1px solid rgba(30, 64, 175, 0.10);
+            padding-bottom: 0.45rem;
+        }
+
+        .stTabs [data-baseweb="tab"] {
+            border-radius: 12px !important;
+            background: rgba(255, 255, 255, 0.78) !important;
+            border: 1px solid rgba(30, 64, 175, 0.08) !important;
+            box-shadow: none !important;
+            min-height: 2.45rem;
+        }
+
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.14), rgba(14, 165, 233, 0.12)) !important;
+            color: #1d4ed8 !important;
+            border-color: rgba(37, 99, 235, 0.20) !important;
+        }
+
+        div[data-testid="stMetric"] {
+            border-radius: 16px !important;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,251,255,0.94)) !important;
+            border: 1px solid var(--efix-line) !important;
+            box-shadow: var(--efix-shadow) !important;
+            min-height: 5.4rem;
+        }
+
+        div[data-testid="stMetricValue"] {
+            font-size: 1.52rem !important;
+            color: var(--efix-ink) !important;
+        }
+
+        div[data-testid="stMetricLabel"] {
+            color: var(--efix-muted) !important;
+        }
+
+        div[data-testid="stDataFrame"] {
+            border-radius: 16px !important;
+            border: 1px solid var(--efix-line) !important;
+            background: var(--efix-surface-strong) !important;
+            box-shadow: var(--efix-shadow) !important;
+            overflow: hidden;
+        }
+
+        [data-testid="stExpander"] {
+            border-radius: 14px !important;
+            border: 1px solid var(--efix-line) !important;
+            background: rgba(255, 255, 255, 0.70) !important;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        }
+
+        .stAlert {
+            border-radius: 14px !important;
+            border: 1px solid rgba(30, 64, 175, 0.10) !important;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        .subnav-shell {
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.72);
+            border: 1px solid var(--efix-line);
+            box-shadow: var(--efix-shadow);
+            padding: 0.95rem 1rem;
+            margin-bottom: 0.9rem;
+        }
+
+        .subnav-title {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--efix-ink);
+        }
+
+        @media (max-width: 900px) {
+            .block-container {
+                max-width: 100%;
+                padding-left: 0.8rem !important;
+                padding-right: 0.8rem !important;
+            }
+
+            section[data-testid="stSidebar"] {
+                min-width: 240px !important;
+                max-width: 240px !important;
+            }
+
+            div[data-testid="stHorizontalBlock"] {
+                gap: 0.7rem;
+            }
+        }
+
     </style>
     """, unsafe_allow_html=True)
 
@@ -551,6 +772,18 @@ def mostrar_hero():
 
     ruta_logo = obtener_logo_efix()
     logo_html = ""
+    ruta_fondo = st.session_state.get("fondo_inicio_canarias")
+    if not ruta_fondo:
+        ruta_fondo = obtener_imagen_canarias_local()
+        st.session_state["fondo_inicio_canarias"] = ruta_fondo
+
+    fondo_base64 = imagen_a_base64(ruta_fondo)
+    fondo_css = "linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #0ea5e9 100%)"
+    if fondo_base64:
+        fondo_css = (
+            "linear-gradient(90deg, rgba(8, 20, 38, 0.88) 0%, rgba(15, 23, 42, 0.70) 46%, rgba(14, 165, 233, 0.18) 100%),"
+            f"url('data:image/jpeg;base64,{fondo_base64}')"
+        )
 
     if ruta_logo:
         logo_base64 = imagen_a_base64(ruta_logo)
@@ -570,15 +803,15 @@ def mostrar_hero():
         'padding:2rem;'
         'margin-top:0.4rem;'
         'margin-bottom:1.6rem;'
-        'background:radial-gradient(circle at top right, rgba(56,189,248,0.18), transparent 26%),'
-        'linear-gradient(135deg, #0f172a 0%, #1d4ed8 58%, #0ea5e9 100%);'
+        f'background:{fondo_css};'
+        'background-size:cover;'
+        'background-position:center;'
         'box-shadow:0 24px 60px rgba(37,99,235,0.18);'
         '">'
             '<div style="'
             'position:absolute;'
             'inset:0;'
-            'background:linear-gradient(120deg, rgba(255,255,255,0.05), transparent 40%),'
-            'radial-gradient(circle at bottom left, rgba(255,255,255,0.08), transparent 28%);'
+            'background:linear-gradient(120deg, rgba(255,255,255,0.08), transparent 46%);'
             'pointer-events:none;'
             '"></div>'
 
@@ -588,8 +821,9 @@ def mostrar_hero():
                 '<div style="'
                 'display:inline-block;'
                 'padding:0.42rem 0.85rem;'
-                'border-radius:999px;'
+                'border-radius:12px;'
                 'background:rgba(255,255,255,0.12);'
+                'border:1px solid rgba(255,255,255,0.16);'
                 'color:#e0f2fe;'
                 'font-size:0.92rem;'
                 'font-weight:800;'
@@ -603,7 +837,6 @@ def mostrar_hero():
                 'font-weight:900;'
                 'color:white;'
                 'line-height:1.02;'
-                'letter-spacing:-0.05em;'
                 'margin-bottom:0.7rem;'
                 'max-width:760px;'
                 '">'
@@ -625,7 +858,7 @@ def mostrar_hero():
                     '<div style="'
                     'background:rgba(255,255,255,0.12);'
                     'border:1px solid rgba(255,255,255,0.14);'
-                    'border-radius:18px;'
+                    'border-radius:14px;'
                     'padding:0.85rem 1rem;'
                     'color:white;'
                     'min-width:220px;'
@@ -637,7 +870,7 @@ def mostrar_hero():
                     '<div style="'
                     'background:rgba(255,255,255,0.12);'
                     'border:1px solid rgba(255,255,255,0.14);'
-                    'border-radius:18px;'
+                    'border-radius:14px;'
                     'padding:0.85rem 1rem;'
                     'color:white;'
                     'min-width:240px;'
