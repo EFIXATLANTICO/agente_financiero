@@ -223,7 +223,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
     cursor.execute("""
     SELECT id, sentido, estado_conciliacion, importe
     FROM movimientos_banco
-    WHERE id = 
+    WHERE id = %s
     """, (movimiento_id,))
     mov = cursor.fetchone()
 
@@ -246,7 +246,8 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
     cursor.execute("""
     INSERT INTO conciliaciones
     (movimiento_banco_id, fecha, score_ia, estado, observaciones)
-    VALUES (, , , , )
+    VALUES (%s, %s, %s, %s, %s)
+    RETURNING id
     """, (
         movimiento_id,
         datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -255,13 +256,13 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         ""
     ))
 
-    conciliacion_id = cursor.lastrowid
+    conciliacion_id = cursor.fetchone()[0]
 
     for factura_id, importe in facturas_importes:
         cursor.execute("""
         SELECT tipo, estado, total
         FROM facturas
-        WHERE id = 
+        WHERE id = %s
         """, (factura_id,))
         fila = cursor.fetchone()
 
@@ -295,7 +296,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         cursor.execute("""
         SELECT COALESCE(SUM(importe_aplicado), 0)
         FROM conciliacion_detalle
-        WHERE factura_id = 
+        WHERE factura_id = %s
         """, (factura_id,))
         ya_aplicado = float(cursor.fetchone()[0] or 0)
 
@@ -318,7 +319,7 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
         cursor.execute("""
         INSERT INTO conciliacion_detalle
         (conciliacion_id, factura_id, importe_aplicado)
-        VALUES (, , )
+        VALUES (%s, %s, %s)
         """, (
             conciliacion_id,
             factura_id,
@@ -334,15 +335,15 @@ def aplicar_conciliacion(movimiento_id, facturas_importes):
 
         cursor.execute("""
         UPDATE facturas
-        SET estado = 
-        WHERE id = 
+        SET estado = %s
+        WHERE id = %s
         """, (nuevo_estado, factura_id))
 
     cursor.execute("""
     UPDATE movimientos_banco
     SET estado_conciliacion = 'conciliado',
         revisado = 1
-    WHERE id = 
+    WHERE id = %s
     """, (movimiento_id,))
 
     conn.commit()

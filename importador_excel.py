@@ -263,12 +263,13 @@ def buscar_o_crear_tercero_importacion(tipo_tercero, nombre):
         cursor.execute(
             f"""
             INSERT INTO {tabla} (nombre, nif, direccion, email, telefono)
-            VALUES (, , , , )
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id
             """,
             (nombre.strip(), "", "", "", "")
         )
+        tercero_id = cursor.fetchone()[0]
         conn.commit()
-        tercero_id = cursor.lastrowid
         conn.close()
         return tercero_id
 
@@ -811,19 +812,20 @@ def importar_asientos_desde_excel(df, nombre_archivo, archivo_bytes):
 
         cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (, , )
+        VALUES (%s, %s, %s)
+        RETURNING id
         """, (fecha, concepto, "importado_excel"))
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         cursor.execute("""
         INSERT INTO asientos_importacion (importacion_id, asiento_id)
-        VALUES (, )
+        VALUES (%s, %s)
         """, (importacion_id, asiento_id))
 
         for cuenta, movimiento, importe in lineas:
             cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (, , , )
+            VALUES (%s, %s, %s, %s)
             """, (asiento_id, cuenta, movimiento, float(_parsear_importe(importe))))
 
         importados += 1
@@ -1135,7 +1137,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 cursor.execute("""
                     SELECT id
                     FROM proveedores
-                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM())
+                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
                     LIMIT 1
                 """, (razon,))
                 fila_proveedor = cursor.fetchone()
@@ -1145,9 +1147,10 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 else:
                     cursor.execute("""
                         INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                        VALUES (, '', '', '', '')
+                        VALUES (%s, '', '', '', '')
+                        RETURNING id
                     """, (razon,))
-                    proveedor_id = cursor.lastrowid
+                    proveedor_id = cursor.fetchone()[0]
 
                 fecha_emision_txt = fecha_fact.strftime("%Y-%m-%d") if pd.notna(fecha_fact) else None
                 fecha_venc_txt = fecha_vcto.strftime("%Y-%m-%d") if pd.notna(fecha_vcto) else None
@@ -1179,7 +1182,8 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                         forma_pago,
                         observaciones
                     )
-                    VALUES (, , , , , , , , , , , )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
                 """, (
                     "compra",
                     numero_factura,
@@ -1194,23 +1198,24 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                     forma_pago,
                     f"Proveedor: {razon} | Identificador: {identificador} | Codigo proveedor: {proveedor_codigo} | IGIC aplicado: {igic_pct}%"
                 ))
-                factura_id = cursor.lastrowid
+                factura_id = cursor.fetchone()[0]
 
                 fecha_asiento = fecha_emision_txt or fecha_venc_txt or datetime.now().strftime("%Y-%m-%d")
 
                 cursor.execute("""
                     INSERT INTO asientos (fecha, concepto, tipo_operacion)
-                    VALUES (, , )
+                    VALUES (%s, %s, %s)
+                    RETURNING id
                 """, (
                     fecha_asiento,
                     concepto,
                     "factura_importada_excel"
                 ))
-                asiento_id = cursor.lastrowid
+                asiento_id = cursor.fetchone()[0]
 
                 cursor.execute("""
                     INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                    VALUES (, )
+                    VALUES (%s, %s)
                 """, (importacion_id, asiento_id))
 
                 if importe >= 0:
@@ -1229,7 +1234,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 for cuenta_linea, movimiento, importe_linea in lineas:
                     cursor.execute("""
                         INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                        VALUES (, , , )
+                        VALUES (%s, %s, %s, %s)
                     """, (
                         asiento_id,
                         cuenta_linea,
@@ -1251,7 +1256,7 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                             tipo,
                             nombre_tercero
                         )
-                        VALUES (, , , , , , )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
                     """, (
                         factura_id,
                         fecha_venc_txt,
@@ -1619,17 +1624,17 @@ def deshacer_ultima_importacion():
     cursor.execute("""
     SELECT asiento_id
     FROM asientos_importacion
-    WHERE importacion_id = 
+    WHERE importacion_id = %s
     """, (importacion_id,))
     asientos = cursor.fetchall()
 
     for fila in asientos:
         asiento_id = fila[0]
-        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = ", (asiento_id,))
-        cursor.execute("DELETE FROM asientos WHERE id = ", (asiento_id,))
+        cursor.execute("DELETE FROM lineas_asiento WHERE asiento_id = %s", (asiento_id,))
+        cursor.execute("DELETE FROM asientos WHERE id = %s", (asiento_id,))
 
-    cursor.execute("DELETE FROM asientos_importacion WHERE importacion_id = ", (importacion_id,))
-    cursor.execute("DELETE FROM importaciones WHERE id = ", (importacion_id,))
+    cursor.execute("DELETE FROM asientos_importacion WHERE importacion_id = %s", (importacion_id,))
+    cursor.execute("DELETE FROM importaciones WHERE id = %s", (importacion_id,))
 
     conn.commit()
     conn.close()
@@ -2247,7 +2252,7 @@ def importar_documento_facturas(df, nombre_archivo, archivo_bytes, mapeo, opcion
                                 tipo,
                                 nombre_tercero
                             )
-                            VALUES (, , , , , , , )
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                             """,
                             (
                                 empresa_id,

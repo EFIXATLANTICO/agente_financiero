@@ -1,11 +1,72 @@
 import os
-import sqlite3
+import re
 import psycopg2
+from psycopg2 import sql
 import streamlit as st
 
 
 def ensure_dirs():
     pass
+
+
+class PostgresCompatCursor:
+    def __init__(self, cursor):
+        self._cursor = cursor
+        self.lastrowid = None
+
+    def execute(self, query, vars=None):
+        query_text = str(query)
+        normalizada = query_text.strip().lower()
+        self.lastrowid = None
+
+        if (
+            normalizada.startswith("insert into")
+            and " returning " not in normalizada
+            and " on conflict " not in normalizada
+        ):
+            query_text = query_text.rstrip().rstrip(";") + " RETURNING id"
+            self._cursor.execute(query_text, vars)
+            try:
+                fila = self._cursor.fetchone()
+                if fila:
+                    self.lastrowid = fila[0]
+            except Exception:
+                self.lastrowid = None
+            return
+
+        self._cursor.execute(query, vars)
+
+    def executemany(self, query, vars_list):
+        self.lastrowid = None
+        return self._cursor.executemany(query, vars_list)
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+
+class EmpresaConnection:
+    def __init__(self, conn, schema=None):
+        self._conn = conn
+        self.schema = schema
+
+    def cursor(self, *args, **kwargs):
+        return PostgresCompatCursor(self._conn.cursor(*args, **kwargs))
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
+def _normalizar_schema_empresa(path):
+    bruto = os.path.splitext(os.path.basename(str(path or "")))[0] or str(path or "")
+    schema = re.sub(r"[^a-zA-Z0-9_]", "_", bruto).strip("_").lower()
+
+    if not schema:
+        raise RuntimeError("No hay esquema de empresa activo.")
+
+    if schema[0].isdigit():
+        schema = f"empresa_{schema}"
+
+    return schema[:63]
 
 
 def _secret_text(key, default=None):
@@ -146,7 +207,15 @@ def clear_active_db_path():
 
 
 def get_connection():
-    return get_master_connection()
+    schema = _normalizar_schema_empresa(get_db_path())
+    conn = get_master_connection()
+    cur = conn.cursor()
+    cur.execute(sql.SQL("CREATE SCHEMA IF NOT EXISTS {}").format(sql.Identifier(schema)))
+    cur.execute(
+        sql.SQL("SET search_path TO {}, public").format(sql.Identifier(schema))
+    )
+    cur.close()
+    return EmpresaConnection(conn, schema=schema)
 
 
 def get_current_db_info():

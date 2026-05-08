@@ -203,6 +203,10 @@ def inicializar_bd_empresa():
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'pendiente'",
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS creado_en TEXT DEFAULT CURRENT_TIMESTAMP",
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS importe_pendiente REAL DEFAULT 0",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS tipo TEXT",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS nombre_tercero TEXT",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS forma_pago TEXT",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS importe_total REAL DEFAULT 0",
     ]
 
     for sql in migraciones:

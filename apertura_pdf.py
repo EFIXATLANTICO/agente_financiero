@@ -194,15 +194,16 @@ def registrar_asiento_apertura(fecha, concepto, lineas):
 
     cursor.execute("""
         INSERT INTO asientos (fecha, concepto, tipo_operacion)
-        VALUES (, , )
+        VALUES (%s, %s, %s)
+        RETURNING id
     """, (fecha, concepto, "asiento_apertura"))
 
-    asiento_id = cursor.lastrowid
+    asiento_id = cursor.fetchone()[0]
 
     for cuenta, movimiento, importe in lineas:
         cursor.execute("""
             INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-            VALUES (, , , )
+            VALUES (%s, %s, %s, %s)
         """, (asiento_id, cuenta, movimiento, float(importe)))
 
     conn.commit()

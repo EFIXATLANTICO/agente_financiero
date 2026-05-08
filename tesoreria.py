@@ -16,7 +16,7 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
             """
             SELECT id, tipo, nombre_tercero, concepto, total, estado
             FROM facturas
-            WHERE id = 
+            WHERE id = %s
             """,
             (factura_id,)
         )
@@ -78,17 +78,18 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (, , )
+            VALUES (%s, %s, %s)
+            RETURNING id
             """,
             (fecha, concepto_asiento, tipo_asiento)
         )
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
 
         for cuenta, movimiento, importe_linea in lineas:
             cursor.execute(
                 """
                 INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (, , , )
+                VALUES (%s, %s, %s, %s)
                 """,
                 (asiento_id, cuenta, movimiento, float(importe_linea))
             )
@@ -114,8 +115,8 @@ def registrar_cobro_o_pago(factura_id, fecha, forma_pago="transferencia", import
         cursor.execute(
             """
             UPDATE facturas
-            SET estado = , forma_pago = , observaciones = 
-            WHERE id = 
+            SET estado = %s, forma_pago = %s, observaciones = %s
+            WHERE id = %s
             """,
             (nuevo_estado, forma_pago, observaciones, factura_id_db)
         )
@@ -151,7 +152,7 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
             """
             SELECT id, factura_id, tipo, estado, importe, importe_pendiente
             FROM vencimientos
-            WHERE id = 
+            WHERE id = %s
             """,
             (vencimiento_id,)
         )
@@ -202,11 +203,21 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         cursor.execute(
             """
             INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (, , )
+            VALUES (%s, %s, %s)
+            RETURNING id
             """,
             (fecha, concepto, tipo_venc)
         )
-        asiento_id = cursor.lastrowid
+        asiento_id = cursor.fetchone()[0]
+
+        for cuenta, movimiento, importe_linea in lineas:
+            cursor.execute(
+                """
+                INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (asiento_id, cuenta, movimiento, float(importe_linea))
+            )
 
         if cuenta_tesoreria == CONFIG_EMPRESA["cuenta_bancos"]:
             importe_banco = importe if tipo_venc == "cobro" else -importe
@@ -238,8 +249,8 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         cursor.execute(
             """
             UPDATE vencimientos
-            SET estado = , importe_pendiente = 
-            WHERE id = 
+            SET estado = %s, importe_pendiente = %s
+            WHERE id = %s
             """,
             (nuevo_estado, nuevo_pendiente, id_venc)
         )
@@ -292,6 +303,18 @@ def obtener_facturas_pendientes():
     conn.close()
 
     return resultados
+
+
+def cobrar_factura_venta(factura_id, fecha_cobro=None, forma_pago="transferencia"):
+    from facturacion import registrar_cobro_factura
+
+    return registrar_cobro_factura(factura_id, fecha_cobro, forma_pago)
+
+
+def pagar_factura_compra(factura_id, fecha_pago=None, forma_pago="transferencia"):
+    from facturacion import pagar_factura_compra as _pagar_factura_compra
+
+    return _pagar_factura_compra(factura_id, fecha_pago, forma_pago)
 
 
 def ver_facturas_pendientes():
