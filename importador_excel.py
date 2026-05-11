@@ -215,7 +215,7 @@ def _normalizar_nombre_columna(col):
     col = str(col).strip().lower()
     col = unicodedata.normalize("NFD", col)
     col = "".join(c for c in col if unicodedata.category(c) != "Mn")
-    col = col.replace("", "eur")
+    col = col.replace("\u20ac", "eur")
     col = col.replace("(", "").replace(")", "")
     col = col.replace(".", "")
     col = " ".join(col.split())
@@ -464,6 +464,16 @@ def _normalizar_fecha_importacion(valor):
         raise ValueError(f"Fecha no valida: {texto}")
 
 
+def _limpiar_texto_importe(texto):
+    texto = str(texto or "").strip()
+    for simbolo in ("EUR", "eur", "\u20ac", "\u00a0", "\u202f", " "):
+        texto = texto.replace(simbolo, "")
+    texto = texto.strip()
+    if texto.lower().endswith("a") and any(ch.isdigit() for ch in texto[:-1]):
+        texto = texto[:-1]
+    return texto
+
+
 def _parsear_importe(valor):
     if _es_vacio(valor):
         raise ValueError("Importe vacio")
@@ -480,8 +490,7 @@ def _parsear_importe(valor):
         negativo = True
         texto = texto[1:-1].strip()
 
-    texto = texto.replace("", "").replace("EUR", "").replace("eur", "")
-    texto = texto.replace(" ", "")
+    texto = _limpiar_texto_importe(texto)
 
     if "," in texto and "." in texto:
         if texto.rfind(",") > texto.rfind("."):
@@ -2006,7 +2015,7 @@ def _parsear_importe_excel(valor):
     if not texto:
         return 0.0
 
-    texto = texto.replace("", "").replace("EUR", "").replace("eur", "").strip()
+    texto = _limpiar_texto_importe(texto)
 
     if "," in texto:
         texto = texto.replace(".", "").replace(",", ".")

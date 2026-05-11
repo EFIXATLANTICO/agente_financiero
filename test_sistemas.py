@@ -168,6 +168,20 @@ class SmokeTests(unittest.TestCase):
         self.assertIn("asiento_factura_id", resultado)
         self.assertIn("asiento_cobro_id", resultado)
 
+    def test_formato_moneda_usa_eur(self):
+        import app_visual
+
+        self.assertEqual(app_visual.formatear_moneda(1234.5), "1.234,50 EUR")
+        self.assertEqual(app_visual.formatear_moneda(None), "0,00 EUR")
+
+    def test_parseo_importes_acepta_eur_y_sufijo_antiguo(self):
+        import importador_excel
+
+        self.assertEqual(importador_excel._parsear_importe("1.234,56 EUR"), 1234.56)
+        self.assertEqual(importador_excel._parsear_importe("1.234,56 a"), 1234.56)
+        self.assertEqual(importador_excel._parsear_importe_excel("1.234,56 EUR"), 1234.56)
+        self.assertEqual(importador_excel._parsear_importe_excel("1.234,56 a"), 1234.56)
+
 
 if __name__ == "__main__":
     unittest.main()

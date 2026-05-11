@@ -892,7 +892,7 @@ def generar_email_recordatorio_cobro(nombre_cliente, factura_id, importe, fecha_
     cuerpo = (
         f"Estimado/a {nombre_cliente},\n\n"
         f"Le escribimos para recordarle que la factura {factura_id}, emitida con fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} a, figura actualmente como pendiente de cobro.\n\n"
+        f"por importe de {formatear_moneda(importe)}, figura actualmente como pendiente de cobro.\n\n"
         f"Le agradeceriamos que revisara el estado del pago y, en caso de estar ya realizado, "
         f"nos lo indicara para actualizar nuestro registro.\n\n"
         f"Quedamos a su disposicion para cualquier aclaracion.\n\n"
@@ -908,7 +908,7 @@ def generar_email_envio_factura(nombre_cliente, factura_id, importe, fecha_factu
     cuerpo = (
         f"Estimado/a {nombre_cliente},\n\n"
         f"Le remitimos la factura {factura_id}, de fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} a.\n\n"
+        f"por importe de {formatear_moneda(importe)}.\n\n"
         f"Quedamos a su disposicion para cualquier consulta.\n\n"
         f"Un saludo,\nAdministracion"
     )
@@ -922,7 +922,7 @@ def generar_email_proveedor(nombre_proveedor, factura_id, importe, fecha_factura
     cuerpo = (
         f"Estimado/a {nombre_proveedor},\n\n"
         f"Estamos revisando la factura {factura_id}, con fecha {fecha_factura}, "
-        f"por importe de {importe:.2f} a.\n\n"
+        f"por importe de {formatear_moneda(importe)}.\n\n"
         f"Le agradeceriamos confirmacion del estado o cualquier aclaracion adicional.\n\n"
         f"Un saludo,\nAdministracion"
     )
@@ -944,7 +944,7 @@ def acciones_sugeridas_pyme():
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
                     "Accion sugerida": "Revisar cobro o enviar recordatorio",
-                    "Detalle": f"{row['total']:.2f} a | {row['fecha_emision']}"
+                    "Detalle": f"{formatear_moneda(row['total'])} | {row['fecha_emision']}"
                 })
 
             df_compras = df_cobros[df_cobros["tipo"] == "compra"].copy()
@@ -955,7 +955,7 @@ def acciones_sugeridas_pyme():
                     "Referencia": f"Factura {row['id']}",
                     "Tercero": row["nombre_tercero"],
                     "Accion sugerida": "Revisar pago a proveedor",
-                    "Detalle": f"{row['total']:.2f} a | {row['fecha_emision']}"
+                    "Detalle": f"{formatear_moneda(row['total'])} | {row['fecha_emision']}"
                 })
     except Exception:
         pass
@@ -969,7 +969,7 @@ def acciones_sugeridas_pyme():
                 "Referencia": f"Movimiento {row['id']}",
                 "Tercero": "-",
                 "Accion sugerida": "Conciliar movimiento",
-                "Detalle": f"{row['fecha']} | {row['concepto']} | {row['importe']:.2f} a"
+                "Detalle": f"{row['fecha']} | {row['concepto']} | {formatear_moneda(row['importe'])}"
             })
     except Exception:
         pass
@@ -1420,14 +1420,14 @@ def pintar_resumen_anual_igic(resumen_igic_trimestres, year_actual):
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Repercutido", f"{total_repercutido:,.2f} a")
+        st.metric("Repercutido", formatear_moneda(total_repercutido))
 
     with col2:
-        st.metric("Soportado", f"{total_soportado:,.2f} a")
+        st.metric("Soportado", formatear_moneda(total_soportado))
 
     with col3:
         etiqueta = "A ingresar" if total_resultado > 0 else "A compensar" if total_resultado < 0 else "Equilibrado"
-        st.metric("Resultado", f"{total_resultado:,.2f} a", etiqueta)
+        st.metric("Resultado", formatear_moneda(total_resultado), etiqueta)
 
 def pintar_card_trimestre_igic(info, datos):
     repercutido = round(float(datos.get("repercutido", 0.0)), 2)
@@ -1453,13 +1453,13 @@ def pintar_card_trimestre_igic(info, datos):
         col1, col2, col3 = st.columns(3)
 
         with col1:
-            st.metric("Repercutido", f"{repercutido:,.2f} a")
+            st.metric("Repercutido", formatear_moneda(repercutido))
 
         with col2:
-            st.metric("Soportado", f"{soportado:,.2f} a")
+            st.metric("Soportado", formatear_moneda(soportado))
 
         with col3:
-            st.metric("Resultado", f"{resultado:,.2f} a")
+            st.metric("Resultado", formatear_moneda(resultado))
 
         st.markdown("#### Liquidacion")
         st.write(f"**Presentacion:** {info['presentacion']}")
@@ -1533,14 +1533,14 @@ def pantalla_resumen_financiero(cursor):
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Ventas totales", f"{ventas:.2f} a")
-        st.metric("IGIC repercutido", f"{igic_repercutido:.2f} a")
+        st.metric("Ventas totales", formatear_moneda(ventas))
+        st.metric("IGIC repercutido", formatear_moneda(igic_repercutido))
     with col2:
-        st.metric("Compras totales", f"{compras:.2f} a")
-        st.metric("IGIC soportado", f"{igic_soportado:.2f} a")
+        st.metric("Compras totales", formatear_moneda(compras))
+        st.metric("IGIC soportado", formatear_moneda(igic_soportado))
     with col3:
-        st.metric("Beneficio bruto", f"{beneficio:.2f} a")
-        st.metric("IGIC a pagar", f"{igic_pagar:.2f} a")
+        st.metric("Beneficio bruto", formatear_moneda(beneficio))
+        st.metric("IGIC a pagar", formatear_moneda(igic_pagar))
     
 
     filas_igic = []
@@ -1592,9 +1592,9 @@ def pantalla_resumen_financiero(cursor):
 
         with st.expander(f"{info['label']} | Liquidacion IGIC"):
             st.write(f"**Periodo:** {info['periodo']}")
-            st.write(f"**IGIC repercutido:** {datos['repercutido']:.2f} a")
-            st.write(f"**IGIC soportado:** {datos['soportado']:.2f} a")
-            st.write(f"**Resultado:** {datos['resultado']:.2f} a")
+            st.write(f"**IGIC repercutido:** {formatear_moneda(datos['repercutido'])}")
+            st.write(f"**IGIC soportado:** {formatear_moneda(datos['soportado'])}")
+            st.write(f"**Resultado:** {formatear_moneda(datos['resultado'])}")
             st.write(f"**Presentacion:** {info['presentacion']}")
             st.write(f"**Pago limite:** {info['pago']}")
 
@@ -1603,13 +1603,13 @@ def pantalla_resumen_financiero(cursor):
             st.markdown(f"[Calendario oficial ATC]({info['calendario_url']})")
 
     st.subheader("Tesoreria")
-    st.metric("Saldo en bancos", f"{bancos:.2f} a")
+    st.metric("Saldo en bancos", formatear_moneda(bancos))
 
     c4, c5 = st.columns(2)
     with c4:
-        st.metric("Saldo clientes", f"{clientes:.2f} a")
+        st.metric("Saldo clientes", formatear_moneda(clientes))
     with c5:
-        st.metric("Saldo proveedores", f"{proveedores:.2f} a")
+        st.metric("Saldo proveedores", formatear_moneda(proveedores))
 
     ventas_chart = 0.0
     compras_chart = 0.0
@@ -2030,7 +2030,7 @@ def analizar_asiento_fianza(cursor, asiento_id, fecha, concepto):
         if fianza_origen:
             score_devolucion += 35
             motivos.append(
-                f"Se ha encontrado una fianza recibida candidata con saldo pendiente {fianza_origen['saldo_pendiente']:.2f} a"
+                f"Se ha encontrado una fianza recibida candidata con saldo pendiente {formatear_moneda(fianza_origen['saldo_pendiente'])}"
             )
 
         tipo = "fianza_devuelta"
@@ -2564,11 +2564,11 @@ def pantalla_fianzas_detectadas(cursor):
         st.info("Deteccion razonable. Conviene revisar antes de crear.")
     else:
         st.warning("Deteccion debil. No se permitirA creacion automatica.")
-    st.write(f"**Importe sugerido detectado:** {importe_sugerido_edicion:.2f} a")
+    st.write(f"**Importe sugerido detectado:** {formatear_moneda(importe_sugerido_edicion)}")
 
     if pd.notna(fianza_origen_edicion):
         st.write(f"**Fianza origen encontrada:** {int(fianza_origen_edicion)}")
-        st.write(f"**Saldo pendiente origen:** {saldo_pendiente_origen_edicion:.2f} a")
+        st.write(f"**Saldo pendiente origen:** {formatear_moneda(saldo_pendiente_origen_edicion)}")
 
     if motivos_edicion:
         st.info(motivos_edicion)
@@ -2995,7 +2995,7 @@ def pantalla_libro_diario(cursor):
 
             st.write(f"**Concepto:** {concepto}")
             st.write(f"**Tipo:** {tipo_operacion}")
-            st.write(f"**Importe total del asiento (debe):** {total_debe:.2f} a")
+            st.write(f"**Importe total del asiento (debe):** {formatear_moneda(total_debe)}")
             st.dataframe(df_lineas, use_container_width=True)
 
             analisis_fianza = analizar_asiento_fianza(cursor, asiento_id, fecha, concepto)
@@ -3012,7 +3012,7 @@ def pantalla_libro_diario(cursor):
             if mostrar_aviso_fianza and not es_asiento_ya_fianza:
                 st.warning(
                     f"Posible fianza detectada en el concepto. "
-                    f"Importe sugerido: {analisis_fianza['importe_sugerido']:.2f} a"
+                    f"Importe sugerido: {formatear_moneda(analisis_fianza['importe_sugerido'])}"
                 )
 
                 col_fianza_1, col_fianza_2, col_fianza_3 = st.columns(3)
@@ -3090,9 +3090,9 @@ def pantalla_balance_comprobacion():
 
     col1, col2 = st.columns(2)
     with col1:
-        st.metric("Total Debe", f"{total_debe:.2f} a")
+        st.metric("Total Debe", formatear_moneda(total_debe))
     with col2:
-        st.metric("Total Haber", f"{total_haber:.2f} a")
+        st.metric("Total Haber", formatear_moneda(total_haber))
 
     if round(total_debe, 2) == round(total_haber, 2):
         st.success("El balance de comprobacion cuadra")
@@ -3486,13 +3486,13 @@ def pantalla_control_contable():
                             c_det1, c_det2, c_det3 = st.columns(3)
 
                             with c_det1:
-                                st.metric("Debe", f"{total_debe:.2f} a")
+                                st.metric("Debe", formatear_moneda(total_debe))
 
                             with c_det2:
-                                st.metric("Haber", f"{total_haber:.2f} a")
+                                st.metric("Haber", formatear_moneda(total_haber))
 
                             with c_det3:
-                                st.metric("Diferencia", f"{(total_debe - total_haber):.2f} a")
+                                st.metric("Diferencia", formatear_moneda(total_debe - total_haber))
                             st.markdown("#### Edicion manual del asiento")
 
                             with st.expander("Editar asiento y lineas", expanded=False):
@@ -3787,12 +3787,16 @@ def pantalla_apertura_pdf():
             st.subheader("Datos detectados del balance")
             st.write(resultado_pdf["detalle"]["datos_balance"])
 
-def formatear_importe_seguro(valor):
+def formatear_moneda(valor, moneda="EUR"):
     try:
         importe = f"{float(valor or 0):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-        return f"{importe} EUR"
-    except:
-        return "0,00 EUR"
+        return f"{importe} {moneda}"
+    except Exception:
+        return f"0,00 {moneda}"
+
+
+def formatear_importe_seguro(valor):
+    return formatear_moneda(valor)
 
 
 def estado_factura_visual(estado, fecha_vencimiento=None):
@@ -4810,7 +4814,7 @@ def pantalla_clientes(cursor):
                         st.metric("Facturas pendientes", resultado_scoring["pendientes"])
 
                     with col_sc5:
-                        st.metric("Saldo pendiente", f"{resultado_scoring['saldo_pendiente']:.2f} a")
+                        st.metric("Saldo pendiente", formatear_moneda(resultado_scoring['saldo_pendiente']))
 
                     with col_sc6:
                         st.metric("Dias de deuda", resultado_scoring["dias_deuda"])
@@ -4821,11 +4825,11 @@ def pantalla_clientes(cursor):
                 with col2:
                     st.metric("Operaciones", ficha["total_operaciones"])
                 with col3:
-                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} a")
+                    st.metric("Volumen total", formatear_moneda(ficha['volumen_total']))
                 with col4:
-                    st.metric("Cobrado", f"{ficha['volumen_cerrado']:.2f} a")
+                    st.metric("Cobrado", formatear_moneda(ficha['volumen_cerrado']))
                 with col5:
-                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} a")
+                    st.metric("Pendiente", formatear_moneda(ficha['saldo_pendiente']))
 
                 st.write(f"**Forma de pago habitual:** {ficha['forma_pago_habitual'] or '-'}")
 
@@ -4956,11 +4960,11 @@ def pantalla_proveedores(cursor):
                 with col2:
                     st.metric("Operaciones", ficha["total_operaciones"])
                 with col3:
-                    st.metric("Volumen total", f"{ficha['volumen_total']:.2f} a")
+                    st.metric("Volumen total", formatear_moneda(ficha['volumen_total']))
                 with col4:
-                    st.metric("Pagado", f"{ficha['volumen_cerrado']:.2f} a")
+                    st.metric("Pagado", formatear_moneda(ficha['volumen_cerrado']))
                 with col5:
-                    st.metric("Pendiente", f"{ficha['saldo_pendiente']:.2f} a")
+                    st.metric("Pendiente", formatear_moneda(ficha['saldo_pendiente']))
 
                 st.write(f"**Forma de pago habitual:** {ficha['forma_pago_habitual'] or '-'}")
 
@@ -5528,7 +5532,7 @@ def pantalla_conciliacion_bancaria():
             st.info("No hay facturas pendientes para conciliar.")
         else:
             opciones_mov = {
-                f"{int(row['id'])} | {row['fecha']} | {row['sentido']} | {float(row['importe']):.2f} a | {str(row['concepto'])[:80]}": int(row["id"])
+                f"{int(row['id'])} | {row['fecha']} | {row['sentido']} | {formatear_moneda(row['importe'])} | {str(row['concepto'])[:80]}": int(row["id"])
                 for _, row in df_mov.iterrows()
             }
 
@@ -5544,7 +5548,7 @@ def pantalla_conciliacion_bancaria():
             importe_movimiento = float(fila_mov["importe"])
             sentido_movimiento = str(fila_mov["sentido"]).strip().lower()
 
-            st.write(f"**Importe movimiento:** {importe_movimiento:.2f} a")
+            st.write(f"**Importe movimiento:** {formatear_moneda(importe_movimiento)}")
             st.write(f"**Sentido:** {sentido_movimiento}")
             st.write(f"**Concepto:** {fila_mov['concepto']}")
 
@@ -5645,19 +5649,19 @@ def pantalla_conciliacion_bancaria():
                 c_man1, c_man2, c_man3 = st.columns(3)
 
                 with c_man1:
-                    st.metric("Importe movimiento", f"{importe_movimiento:.2f} a")
+                    st.metric("Importe movimiento", formatear_moneda(importe_movimiento))
 
                 with c_man2:
-                    st.metric("Total aplicado", f"{total_aplicado:.2f} a")
+                    st.metric("Total aplicado", formatear_moneda(total_aplicado))
 
                 with c_man3:
-                    st.metric("Diferencia", f"{diferencia:.2f} a")
+                    st.metric("Diferencia", formatear_moneda(diferencia))
                 if abs(diferencia) < 0.01:
                     st.success("La propuesta automatica cuadra exactamente con el movimiento.")
                 elif diferencia > 0:
-                    st.warning(f"Quedan {diferencia:.2f} a sin aplicar.")
+                    st.warning(f"Quedan {formatear_moneda(diferencia)} sin aplicar.")
                 else:
-                    st.error(f"Se estA aplicando {abs(diferencia):.2f} a de mas.")
+                    st.error(f"Se esta aplicando {formatear_moneda(abs(diferencia))} de mas.")
 
                 if seleccionadas.empty:
                     st.info("Marca una o varias facturas para aplicar la conciliacion.")
@@ -5862,16 +5866,16 @@ def pantalla_registrar_operacion():
                         st.write(f"**Periodificable:** {'SA' if evento.get('periodificable') else 'No'}")
 
                     if "base" in resultado:
-                        st.write(f"**Base:** {resultado['base']:.2f} a")
+                        st.write(f"**Base:** {formatear_moneda(resultado['base'])}")
 
                     if "igic_pct" in resultado and "igic" in resultado:
-                        st.write(f"**IGIC ({resultado['igic_pct']:.2f}%):** {resultado['igic']:.2f} a")
+                        st.write(f"**IGIC ({resultado['igic_pct']:.2f}%):** {formatear_moneda(resultado['igic'])}")
 
                     if "total" in resultado:
-                        st.write(f"**Total:** {resultado['total']:.2f} a")
+                        st.write(f"**Total:** {formatear_moneda(resultado['total'])}")
 
                     if "importe" in resultado:
-                        st.write(f"**Importe:** {resultado['importe']:.2f} a")
+                        st.write(f"**Importe:** {formatear_moneda(resultado['importe'])}")
 
                     if resultado.get("advertencias"):
                         for aviso in resultado["advertencias"]:
@@ -6041,7 +6045,7 @@ def pantalla_vencimientos(cursor):
         return
 
     total_importe = df_mostrar["Importe"].fillna(0).astype(float).sum()
-    st.write(f"**Total importe listado:** {total_importe:,.2f} a")
+    st.write(f"**Total importe listado:** {formatear_moneda(total_importe)}")
 
     df_mostrar = df_mostrar.sort_values(
         by=["Fecha vencimiento", "Nombre tercero", "ID"],
@@ -6053,7 +6057,7 @@ def pantalla_vencimientos(cursor):
     st.markdown("### Registrar pago / cobro desde vencimiento")
 
     opciones = {
-        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {row['Importe']:.2f} a | {row['Estado']}": int(row["ID"])
+        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {formatear_moneda(row['Importe'])} | {row['Estado']}": int(row["ID"])
         for _, row in df_mostrar.iterrows()
         if str(row["Estado"]).strip().lower() in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]
     }
@@ -7059,11 +7063,11 @@ def pantalla_incidencias_importacion():
 
     v1, v2, v3 = st.columns(3)
     with v1:
-        st.metric("Debe", f"{debe:.2f} a")
+        st.metric("Debe", formatear_moneda(debe))
     with v2:
-        st.metric("Haber", f"{haber:.2f} a")
+        st.metric("Haber", formatear_moneda(haber))
     with v3:
-        st.metric("Diferencia", f"{diferencia:.2f} a")
+        st.metric("Diferencia", formatear_moneda(diferencia))
 
     if diferencia == 0 and cuenta_debe.strip() and cuenta_haber.strip():
         st.success("La correccion propuesta estA cuadrada y lista para aplicarse.")
