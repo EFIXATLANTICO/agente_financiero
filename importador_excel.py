@@ -356,61 +356,45 @@ def inferir_opciones_importacion(df, mapeo):
 def detectar_tipo_excel(df):
     columnas = {_normalizar_nombre_columna(c) for c in df.columns}
 
-    # DEBUG (MUY IMPORTANTE)
-    print("COLUMNAS DETECTADAS:", columnas)
-
-    # --- ASIENTOS ---
     columnas_asientos = {
         "fecha",
         "cuenta debe",
         "debe eur",
         "cuenta haber",
         "haber eur",
-        "concepto"
-    }
-
-    # --- MOVIMIENTOS ---
-    columnas_movimientos = {
-        "fecha",
         "concepto",
-        "importe"
     }
-
-    # --- FACTURAS (flexible) ---
-    tiene_fecha = "fecha" in columnas
-    tiene_total = "total" in columnas or "importe" in columnas
-    tiene_cliente = (
-        "cliente" in columnas
-        or "razon social" in columnas
-        or "nombre" in columnas
-    )
-    tiene_pago = any("pago" in c for c in columnas)
-    tiene_vencimiento = any("venc" in c for c in columnas)
+    columnas_movimientos = {"fecha", "concepto", "importe"}
 
     if columnas_asientos.issubset(columnas):
         return "asientos"
 
+    tiene_referencia_cartera = bool({"factura/venc", "factura", "numero factura", "num factura", "documento", "referencia"} & columnas)
+    tiene_importe = bool({"importe", "total", "importe eur", "total eur"} & columnas)
+    tiene_vencimiento = any("venc" in c or "vcto" in c for c in columnas)
+    tiene_proveedor = bool({"proveedor", "nombre proveedor"} & columnas)
+    tiene_cliente = bool({"cliente", "nombre cliente"} & columnas)
+    tiene_razon = bool({"razon", "razon social", "nombre"} & columnas)
+
+    if tiene_referencia_cartera and tiene_importe and (tiene_vencimiento or "estado" in columnas):
+        if tiene_proveedor:
+            return "pagos_proveedor"
+        if tiene_cliente:
+            return "cobros_cliente"
+        if tiene_razon and any("cobro" in c for c in columnas):
+            return "cobros_cliente"
+        if tiene_razon and any("pago" in c for c in columnas):
+            return "pagos_proveedor"
+
     if columnas_movimientos.issubset(columnas):
         return "movimientos"
 
-    #  DETECCION INTELIGENTE
-    if tiene_fecha and tiene_total and tiene_cliente:
-        return "facturas"
-    # --- PAGOS PROVEEDOR / CARTERA DE PAGOS ---
-    columnas_pagos_base = {
-        "factura/venc",
-        "identificador",
-        "proveedor",
-        "razon",
-        "importe",
-        "fec fact",
-        "fec vcto",
-        "forma de pago",
-        "estado"
-    }
+    tiene_fecha = "fecha" in columnas or "fecha factura" in columnas or "fec fact" in columnas
+    tiene_total = "total" in columnas or "importe" in columnas
+    tiene_tercero = tiene_cliente or tiene_razon or tiene_proveedor
 
-    if columnas_pagos_base.issubset(columnas) and ("fp" in columnas or "f p" in columnas):
-        return "pagos_proveedor"
+    if tiene_fecha and tiene_total and tiene_tercero:
+        return "facturas"
 
     return "desconocido"
 
@@ -1067,247 +1051,6 @@ def importar_movimientos_desde_excel(df, nombre_archivo, archivo_bytes):
     finally:
         conn.close()
 
-def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
-    hash_archivo = calcular_hash_archivo(archivo_bytes)
-    importacion_id, estado = registrar_importacion("pagos_proveedor", nombre_archivo, hash_archivo)
-
-    if estado == "duplicado":
-        return {"ok": False, "estado": "duplicado"}
-
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    importadas = 0
-    duplicadas = 0
-    errores = []
-
-    def registrar_error(fila_excel, fecha, concepto, mensaje, datos=None):
-        error_dict = {
-            "fila_excel": fila_excel,
-            "fecha": fecha,
-            "concepto": concepto,
-            "error": mensaje,
-        }
-        errores.append(error_dict)
-        guardar_incidencia_importacion(
-            importacion_id=importacion_id,
-            tipo_importacion="pagos_proveedor",
-            fila_excel=fila_excel,
-            fecha=fecha,
-            concepto=concepto,
-            detalle_error=mensaje,
-            datos=datos or error_dict,
-            conn=conn,
-            cursor=cursor,
-        )
-
-    try:
-        columnas_requeridas = [
-            "factura/venc",
-            "identificador",
-            "proveedor",
-            "razon",
-            "importe",
-            "fec fact",
-            "fec vcto",
-            "forma de pago",
-            "estado",
-        ]
-
-        faltantes = [c for c in columnas_requeridas if c not in df.columns]
-        if faltantes:
-            return {"ok": False, "estado": "error_columnas", "detalle": faltantes}
-
-        if "fp" not in df.columns and "f p" not in df.columns:
-            return {"ok": False, "estado": "error_columnas", "detalle": ["fp"]}
-
-        for idx, row in df.iterrows():
-            fila_excel = int(idx) + 2
-
-            try:
-                referencia = str(row.get("factura/venc", "") or "").strip()
-                identificador = str(row.get("identificador", "") or "").strip()
-                proveedor_codigo = str(row.get("proveedor", "") or "").strip()
-                razon = str(row.get("razon", "") or "").strip()
-                forma_pago = str(row.get("forma de pago", "") or "").strip()
-                estado_pago = str(row.get("estado", "") or "").strip().lower()
-
-                importe = _parsear_importe(row.get("importe"))
-
-                if importe == 0:
-                    raise ValueError("El importe es cero")
-
-                fecha_fact = pd.to_datetime(row.get("fec fact"), errors="coerce")
-                fecha_vcto = pd.to_datetime(row.get("fec vcto"), errors="coerce")
-
-                if not razon:
-                    raise ValueError("La razon del proveedor esta vacia")
-
-                cursor.execute("""
-                    SELECT id
-                    FROM proveedores
-                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
-                    LIMIT 1
-                """, (razon,))
-                fila_proveedor = cursor.fetchone()
-
-                if fila_proveedor:
-                    proveedor_id = int(fila_proveedor[0])
-                else:
-                    cursor.execute("""
-                        INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                        VALUES (%s, '', '', '', '')
-                        RETURNING id
-                    """, (razon,))
-                    proveedor_id = cursor.fetchone()[0]
-
-                fecha_emision_txt = fecha_fact.strftime("%Y-%m-%d") if pd.notna(fecha_fact) else None
-                fecha_venc_txt = fecha_vcto.strftime("%Y-%m-%d") if pd.notna(fecha_vcto) else None
-
-                numero_factura = referencia if referencia else identificador
-                concepto = f"Pago proveedor {razon} | Ref {numero_factura}"
-
-                estado_factura = "pendiente"
-                if estado_pago in ["pagado", "pagada"]:
-                    estado_factura = "pagada"
-
-                igic_pct = 7.0
-                total_factura = float(abs(importe))
-                base_imponible = round(total_factura / (1 + igic_pct / 100), 2)
-                cuota_igic = round(total_factura - base_imponible, 2)
-
-                cursor.execute("""
-                    INSERT INTO facturas (
-                        tipo,
-                        numero_factura,
-                        tercero_id,
-                        fecha_emision,
-                        fecha_vencimiento,
-                        concepto,
-                        base_imponible,
-                        cuota_impuesto,
-                        total,
-                        estado,
-                        forma_pago,
-                        observaciones
-                    )
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                    RETURNING id
-                """, (
-                    "compra",
-                    numero_factura,
-                    proveedor_id,
-                    fecha_emision_txt,
-                    fecha_venc_txt,
-                    concepto,
-                    float(base_imponible),
-                    float(cuota_igic),
-                    float(total_factura),
-                    estado_factura,
-                    forma_pago,
-                    f"Proveedor: {razon} | Identificador: {identificador} | Codigo proveedor: {proveedor_codigo} | IGIC aplicado: {igic_pct}%"
-                ))
-                factura_id = cursor.fetchone()[0]
-
-                fecha_asiento = fecha_emision_txt or fecha_venc_txt or datetime.now().strftime("%Y-%m-%d")
-
-                cursor.execute("""
-                    INSERT INTO asientos (fecha, concepto, tipo_operacion)
-                    VALUES (%s, %s, %s)
-                    RETURNING id
-                """, (
-                    fecha_asiento,
-                    concepto,
-                    "factura_importada_excel"
-                ))
-                asiento_id = cursor.fetchone()[0]
-
-                cursor.execute("""
-                    INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                    VALUES (%s, %s)
-                """, (importacion_id, asiento_id))
-
-                if importe >= 0:
-                    lineas = [
-                        ("600 Compras", "debe", float(base_imponible)),
-                        ("472 Hacienda Publica, IGIC soportado", "debe", float(cuota_igic)),
-                        ("400 Proveedores", "haber", float(total_factura)),
-                    ]
-                else:
-                    lineas = [
-                        ("400 Proveedores", "debe", float(total_factura)),
-                        ("609 Rappels por compras", "haber", float(base_imponible)),
-                        ("472 Hacienda Publica, IGIC soportado", "haber", float(cuota_igic)),
-                    ]
-
-                for cuenta_linea, movimiento, importe_linea in lineas:
-                    cursor.execute("""
-                        INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                        VALUES (%s, %s, %s, %s)
-                    """, (
-                        asiento_id,
-                        cuenta_linea,
-                        movimiento,
-                        float(importe_linea)
-                    ))
-
-                if fecha_venc_txt:
-                    estado_venc = "vencido" if estado_pago in ["vencido", "vencida"] else "pendiente"
-                    importe_pendiente = 0.0 if estado_factura == "pagada" else float(abs(importe))
-
-                    cursor.execute("""
-                        INSERT INTO vencimientos (
-                            factura_id,
-                            fecha_vencimiento,
-                            importe,
-                            importe_pendiente,
-                            estado,
-                            tipo,
-                            nombre_tercero
-                        )
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, (
-                        factura_id,
-                        fecha_venc_txt,
-                        float(abs(importe)),
-                        float(importe_pendiente),
-                        estado_venc,
-                        "pago",
-                        razon
-                    ))
-
-                importadas += 1
-
-            except Exception as e:
-                registrar_error(
-                    fila_excel=fila_excel,
-                    fecha=str(row.get("fec fact", "") or ""),
-                    concepto=str(row.get("factura/venc", "") or ""),
-                    mensaje=str(e),
-                    datos={
-                        "referencia": str(row.get("factura/venc", "") or "").strip(),
-                        "identificador": str(row.get("identificador", "") or "").strip(),
-                        "proveedor": str(row.get("razon", "") or "").strip(),
-                    }
-                )
-
-        conn.commit()
-
-        return {
-            "ok": True,
-            "estado": "ok",
-            "importadas": importadas,
-            "errores": errores,
-            "num_errores": len(errores),
-        }
-
-    except Exception as e:
-        conn.rollback()
-        return {"ok": False, "estado": "error", "detalle": str(e)}
-
-    finally:
-        conn.close()
-
 def _cuenta_compra_por_proveedor(razon, referencia="", forma_pago=""):
     texto = f"{razon or ''} {referencia or ''} {forma_pago or ''}".lower()
 
@@ -1333,14 +1076,151 @@ def _cuenta_compra_por_proveedor(razon, referencia="", forma_pago=""):
     return "629 Otros servicios"
 
 
-def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
+def _cuenta_tesoreria_por_forma_pago(forma_pago):
+    forma_pago = str(forma_pago or "").strip().lower()
+    if forma_pago in ["contado", "efectivo", "caja"]:
+        return "570 Caja"
+    return "572 Bancos"
+
+
+def _columna_existente(df, *candidatas):
+    for candidata in candidatas:
+        if candidata in df.columns:
+            return candidata
+    return None
+
+
+def _columnas_cartera(df, tipo_tercero):
+    tercero_cols = (
+        ("razon", "proveedor", "razon social", "nombre", "nombre proveedor")
+        if tipo_tercero == "proveedor"
+        else ("razon", "cliente", "razon social", "nombre", "nombre cliente")
+    )
+    return {
+        "referencia": _columna_existente(df, "factura/venc", "factura", "numero factura", "num factura", "documento", "referencia"),
+        "identificador": _columna_existente(df, "identificador", "id documento", "codigo", "cod"),
+        "tercero_codigo": _columna_existente(df, "proveedor" if tipo_tercero == "proveedor" else "cliente", "codigo tercero", "codigo"),
+        "tercero": _columna_existente(df, *tercero_cols),
+        "importe": _columna_existente(df, "importe", "total", "importe eur", "total eur"),
+        "fecha_factura": _columna_existente(df, "fec fact", "fecha factura", "fecha", "fecha emision"),
+        "fecha_vencimiento": _columna_existente(df, "fec vcto", "fecha vencimiento", "vencimiento", "fecha vcto"),
+        "forma_pago": _columna_existente(df, "forma de pago", "forma pago", "metodo pago", "fp", "f p"),
+        "estado": _columna_existente(df, "estado", "situacion"),
+    }
+
+
+def _validar_columnas_cartera(df, tipo_tercero):
+    columnas = _columnas_cartera(df, tipo_tercero)
+    etiquetas = {
+        "referencia": "factura/referencia",
+        "tercero": "cliente" if tipo_tercero == "cliente" else "proveedor",
+        "importe": "importe",
+        "fecha_factura": "fecha factura",
+    }
+    faltantes = [etiquetas[k] for k in etiquetas if not columnas.get(k)]
+    return columnas, faltantes
+
+
+def _estado_pagado(estado):
+    estado = str(estado or "").strip().lower()
+    return estado in ["pagado", "pagada", "cobrado", "cobrada", "liquidado", "liquidada"]
+
+
+def _crear_tercero_si_falta(cursor, tipo_tercero, nombre):
+    tabla = "clientes" if tipo_tercero == "cliente" else "proveedores"
+    cursor.execute(
+        f"""
+        SELECT id
+        FROM {tabla}
+        WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
+        LIMIT 1
+        """,
+        (nombre,),
+    )
+    fila = cursor.fetchone()
+    if fila:
+        return int(fila[0])
+
+    cursor.execute(
+        f"""
+        INSERT INTO {tabla} (nombre, nif, direccion, email, telefono)
+        VALUES (%s, %s, %s, %s, %s)
+        RETURNING id
+        """,
+        (nombre, "", "", "", ""),
+    )
+    return int(cursor.fetchone()[0])
+
+
+def _lineas_factura_cartera(tipo_tercero, es_abono, base, cuota, total, cuenta_gasto):
+    if tipo_tercero == "proveedor":
+        if es_abono:
+            return [
+                ("400 Proveedores", "debe", total),
+                ("608 Devoluciones de compras y operaciones similares", "haber", base),
+                ("472 Hacienda Publica, IGIC soportado", "haber", cuota),
+            ]
+        return [
+            (cuenta_gasto, "debe", base),
+            ("472 Hacienda Publica, IGIC soportado", "debe", cuota),
+            ("400 Proveedores", "haber", total),
+        ]
+
+    if es_abono:
+        return [
+            ("708 Devoluciones de ventas y operaciones similares", "debe", base),
+            ("477 Hacienda Publica, IGIC repercutido", "debe", cuota),
+            ("430 Clientes", "haber", total),
+        ]
+    return [
+        ("430 Clientes", "debe", total),
+        ("700 Ventas de mercaderias", "haber", base),
+        ("477 Hacienda Publica, IGIC repercutido", "haber", cuota),
+    ]
+
+
+def _lineas_movimiento_cartera(tipo_tercero, total, forma_pago):
+    cuenta_tesoreria = _cuenta_tesoreria_por_forma_pago(forma_pago)
+    if tipo_tercero == "cliente":
+        return [(cuenta_tesoreria, "debe", total), ("430 Clientes", "haber", total)]
+    return [("400 Proveedores", "debe", total), (cuenta_tesoreria, "haber", total)]
+
+
+def _insertar_lineas_asiento(cursor, asiento_id, lineas):
+    for cuenta_linea, movimiento, importe_linea in lineas:
+        if round(float(importe_linea or 0), 2) == 0:
+            continue
+        cursor.execute(
+            """
+            INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (asiento_id, cuenta_linea, movimiento, float(importe_linea)),
+        )
+
+
+def _importar_cartera_desde_excel(df, nombre_archivo, archivo_bytes, tipo_tercero):
     from db_context import obtener_empresa_id_activa
 
+    tipo_importacion = "cobros_cliente" if tipo_tercero == "cliente" else "pagos_proveedor"
     hash_archivo = calcular_hash_archivo(archivo_bytes)
-    importacion_id, estado = registrar_importacion("pagos_proveedor", nombre_archivo, hash_archivo)
+    importacion_id, estado = registrar_importacion(tipo_importacion, nombre_archivo, hash_archivo)
 
     if estado == "duplicado":
         return {"ok": False, "estado": "duplicado"}
+
+    columnas, faltantes = _validar_columnas_cartera(df, tipo_tercero)
+    if faltantes:
+        guardar_incidencia_importacion(
+            importacion_id=importacion_id,
+            tipo_importacion=tipo_importacion,
+            fila_excel=0,
+            fecha="",
+            concepto=nombre_archivo,
+            detalle_error=f"Faltan columnas obligatorias: {', '.join(faltantes)}",
+            datos={"faltantes": faltantes, "columnas_detectadas": list(df.columns)},
+        )
+        return {"ok": False, "estado": "error_columnas", "detalle": faltantes}
 
     empresa_id = obtener_empresa_id_activa()
     conn = get_connection()
@@ -1356,13 +1236,13 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
             "fila_excel": fila_excel,
             "fecha": fecha,
             "numero_factura": concepto,
-            "tercero": (datos or {}).get("proveedor", ""),
+            "tercero": (datos or {}).get("tercero", ""),
             "error": mensaje,
         }
         errores.append(error_dict)
         guardar_incidencia_importacion(
             importacion_id=importacion_id,
-            tipo_importacion="pagos_proveedor",
+            tipo_importacion=tipo_importacion,
             fila_excel=fila_excel,
             fecha=fecha,
             concepto=concepto,
@@ -1373,91 +1253,67 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
         )
 
     try:
-        columnas_requeridas = [
-            "factura/venc",
-            "identificador",
-            "proveedor",
-            "razon",
-            "importe",
-            "fec fact",
-            "fec vcto",
-            "forma de pago",
-            "estado",
-        ]
-
-        faltantes = [c for c in columnas_requeridas if c not in df.columns]
-        if faltantes:
-            return {"ok": False, "estado": "error_columnas", "detalle": faltantes}
-
         for idx, row in df.iterrows():
             fila_excel = int(idx) + 2
+            savepoint_abierto = False
 
             try:
                 cursor.execute("SAVEPOINT fila_importacion")
+                savepoint_abierto = True
 
-                referencia = _texto_limpio(row.get("factura/venc"))
-                identificador = _texto_limpio(row.get("identificador"))
-                proveedor_codigo = _texto_limpio(row.get("proveedor"))
-                razon = _texto_limpio(row.get("razon"))
-                forma_pago = _texto_limpio(row.get("forma de pago"), "credito").lower()
-                estado_pago = _texto_limpio(row.get("estado")).lower()
+                referencia = _texto_limpio(row.get(columnas["referencia"]))
+                identificador = _texto_limpio(row.get(columnas["identificador"])) if columnas.get("identificador") else ""
+                tercero_codigo = _texto_limpio(row.get(columnas["tercero_codigo"])) if columnas.get("tercero_codigo") else ""
+                tercero = _texto_limpio(row.get(columnas["tercero"]))
+                forma_pago = _texto_limpio(row.get(columnas["forma_pago"]), "transferencia").lower() if columnas.get("forma_pago") else "transferencia"
+                estado_pago = _texto_limpio(row.get(columnas["estado"])).lower() if columnas.get("estado") else ""
 
-                importe = round(_parsear_importe_excel(row.get("importe")), 2)
+                importe = round(_parsear_importe_excel(row.get(columnas["importe"])), 2)
                 if importe == 0:
                     raise ValueError("El importe es cero")
 
-                fecha_fact = pd.to_datetime(row.get("fec fact"), errors="coerce", dayfirst=True)
-                fecha_vcto = pd.to_datetime(row.get("fec vcto"), errors="coerce", dayfirst=True)
+                fecha_fact = pd.to_datetime(row.get(columnas["fecha_factura"]), errors="coerce", dayfirst=True)
+                fecha_vcto = pd.to_datetime(row.get(columnas["fecha_vencimiento"]), errors="coerce", dayfirst=True) if columnas.get("fecha_vencimiento") else pd.NaT
 
-                if not razon:
-                    raise ValueError("La razon del proveedor esta vacia")
-
-                cursor.execute(
-                    """
-                    SELECT id
-                    FROM proveedores
-                    WHERE UPPER(TRIM(nombre)) = UPPER(TRIM(%s))
-                    LIMIT 1
-                    """,
-                    (razon,),
-                )
-                fila_proveedor = cursor.fetchone()
-
-                if fila_proveedor:
-                    proveedor_id = int(fila_proveedor[0])
-                else:
-                    cursor.execute(
-                        """
-                        INSERT INTO proveedores (nombre, nif, direccion, email, telefono)
-                        VALUES (%s, %s, %s, %s, %s)
-                        RETURNING id
-                        """,
-                        (razon, "", "", "", ""),
-                    )
-                    proveedor_id = cursor.fetchone()[0]
+                if not tercero:
+                    raise ValueError("El tercero esta vacio")
 
                 fecha_venc_txt = fecha_vcto.strftime("%Y-%m-%d") if pd.notna(fecha_vcto) else None
                 fecha_emision_txt = fecha_fact.strftime("%Y-%m-%d") if pd.notna(fecha_fact) else fecha_venc_txt
                 if not fecha_emision_txt:
-                    raise ValueError("Falta fecha de factura y fecha de vencimiento")
-                numero_factura = referencia or identificador
-                concepto = f"Factura proveedor {razon} | Ref {numero_factura}"
-                estado_factura = "pagada" if estado_pago in ["pagado", "pagada", "cobrado", "cobrada"] else "pendiente"
+                    raise ValueError("Falta fecha de factura")
 
-                igic_pct = 7.0
+                numero_factura = referencia or identificador
+                if not numero_factura:
+                    raise ValueError("Falta factura o referencia")
+
+                tercero_id = _crear_tercero_si_falta(cursor, tipo_tercero, tercero)
+
                 total_factura = float(abs(importe))
+                igic_pct = 7.0
                 base_imponible = round(total_factura / (1 + igic_pct / 100), 2)
                 cuota_igic = round(total_factura - base_imponible, 2)
                 es_abono = importe < 0
-                tipo_factura = "abono_compra" if es_abono else "compra"
-                cuenta_gasto = _cuenta_compra_por_proveedor(razon, referencia, forma_pago)
+
+                if tipo_tercero == "cliente":
+                    tipo_factura = "abono_venta" if es_abono else "venta"
+                    serie = "CLI"
+                    concepto = f"Factura cliente {tercero} | Ref {numero_factura}"
+                    estado_factura = "abono" if es_abono else ("cobrada" if _estado_pagado(estado_pago) else "pendiente")
+                    cuenta_gasto = None
+                else:
+                    tipo_factura = "abono_compra" if es_abono else "compra"
+                    serie = "PROV"
+                    concepto = f"Factura proveedor {tercero} | Ref {numero_factura}"
+                    estado_factura = "abono" if es_abono else ("pagada" if _estado_pagado(estado_pago) else "pendiente")
+                    cuenta_gasto = _cuenta_compra_por_proveedor(tercero, referencia, forma_pago)
 
                 if _existe_factura_importada(
                     cursor,
                     empresa_id=empresa_id,
                     tipo=tipo_factura,
                     numero_factura=numero_factura,
-                    nombre_tercero=razon,
+                    nombre_tercero=tercero,
                     fecha_emision=fecha_emision_txt,
                     total=total_factura,
                 ):
@@ -1480,10 +1336,10 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                     (
                         empresa_id,
                         tipo_factura,
-                        "PROV",
+                        serie,
                         numero_factura,
-                        proveedor_id,
-                        razon,
+                        tercero_id,
+                        tercero,
                         fecha_emision_txt,
                         fecha_emision_txt,
                         fecha_venc_txt,
@@ -1493,59 +1349,56 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                         float(igic_pct),
                         float(cuota_igic),
                         float(total_factura),
-                        "abono" if es_abono else estado_factura,
+                        estado_factura,
                         forma_pago,
-                        f"Importado de Seralven | Proveedor codigo: {proveedor_codigo} | Identificador: {identificador} | Cuenta sugerida: {cuenta_gasto}",
+                        f"Importado desde Excel de {tipo_importacion} | Codigo tercero: {tercero_codigo} | Identificador: {identificador}",
                     ),
                 )
-                factura_id = cursor.fetchone()[0]
+                factura_id = int(cursor.fetchone()[0])
 
-                fecha_asiento = fecha_emision_txt or fecha_venc_txt or datetime.now().strftime("%Y-%m-%d")
                 cursor.execute(
                     """
                     INSERT INTO asientos (fecha, concepto, tipo_operacion)
                     VALUES (%s, %s, %s)
                     RETURNING id
                     """,
-                    (fecha_asiento, concepto, "abono_importado_excel" if es_abono else "factura_importada_excel"),
+                    (fecha_emision_txt, concepto, "abono_importado_excel" if es_abono else "factura_importada_excel"),
                 )
-                asiento_id = cursor.fetchone()[0]
-
+                asiento_factura_id = int(cursor.fetchone()[0])
                 cursor.execute(
-                    """
-                    INSERT INTO asientos_importacion (importacion_id, asiento_id)
-                    VALUES (%s, %s)
-                    """,
-                    (importacion_id, asiento_id),
+                    "INSERT INTO asientos_importacion (importacion_id, asiento_id) VALUES (%s, %s)",
+                    (importacion_id, asiento_factura_id),
+                )
+                _insertar_lineas_asiento(
+                    cursor,
+                    asiento_factura_id,
+                    _lineas_factura_cartera(tipo_tercero, es_abono, base_imponible, cuota_igic, total_factura, cuenta_gasto),
                 )
 
-                if es_abono:
-                    lineas = [
-                        ("400 Proveedores", "debe", float(total_factura)),
-                        ("608 Devoluciones de compras y operaciones similares", "haber", float(base_imponible)),
-                        ("472 Hacienda Publica, IGIC soportado", "haber", float(cuota_igic)),
-                    ]
-                else:
-                    lineas = [
-                        (cuenta_gasto, "debe", float(base_imponible)),
-                        ("472 Hacienda Publica, IGIC soportado", "debe", float(cuota_igic)),
-                        ("400 Proveedores", "haber", float(total_factura)),
-                    ]
-
-                for cuenta_linea, movimiento, importe_linea in lineas:
-                    if round(float(importe_linea or 0), 2) == 0:
-                        continue
+                if not es_abono and _estado_pagado(estado_pago):
+                    tipo_movimiento = "cobro_factura" if tipo_tercero == "cliente" else "pago_factura"
+                    etiqueta = "Cobro" if tipo_tercero == "cliente" else "Pago"
                     cursor.execute(
                         """
-                        INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                        VALUES (%s, %s, %s, %s)
+                        INSERT INTO asientos (fecha, concepto, tipo_operacion)
+                        VALUES (%s, %s, %s)
+                        RETURNING id
                         """,
-                        (asiento_id, cuenta_linea, movimiento, float(importe_linea)),
+                        (fecha_venc_txt or fecha_emision_txt, f"{etiqueta} factura {numero_factura} - {tercero}", tipo_movimiento),
+                    )
+                    asiento_movimiento_id = int(cursor.fetchone()[0])
+                    cursor.execute(
+                        "INSERT INTO asientos_importacion (importacion_id, asiento_id) VALUES (%s, %s)",
+                        (importacion_id, asiento_movimiento_id),
+                    )
+                    _insertar_lineas_asiento(
+                        cursor,
+                        asiento_movimiento_id,
+                        _lineas_movimiento_cartera(tipo_tercero, total_factura, forma_pago),
                     )
 
                 if fecha_venc_txt and not es_abono:
-                    estado_venc = "vencido" if estado_pago in ["vencido", "vencida"] else "pendiente"
-                    importe_pendiente = 0.0 if estado_factura == "pagada" else float(total_factura)
+                    estado_venc = "pagado" if _estado_pagado(estado_pago) else ("vencido" if estado_pago in ["vencido", "vencida"] else "pendiente")
                     cursor.execute(
                         """
                         INSERT INTO vencimientos (
@@ -1559,10 +1412,10 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                             factura_id,
                             fecha_venc_txt,
                             float(total_factura),
-                            float(importe_pendiente),
+                            0.0 if estado_venc == "pagado" else float(total_factura),
                             estado_venc,
-                            "pago",
-                            razon,
+                            "cobro" if tipo_tercero == "cliente" else "pago",
+                            tercero,
                         ),
                     )
 
@@ -1570,21 +1423,22 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
                 cursor.execute("RELEASE SAVEPOINT fila_importacion")
 
             except Exception as e:
-                try:
-                    cursor.execute("ROLLBACK TO SAVEPOINT fila_importacion")
-                    cursor.execute("RELEASE SAVEPOINT fila_importacion")
-                except Exception:
-                    conn.rollback()
+                if savepoint_abierto:
+                    try:
+                        cursor.execute("ROLLBACK TO SAVEPOINT fila_importacion")
+                        cursor.execute("RELEASE SAVEPOINT fila_importacion")
+                    except Exception:
+                        conn.rollback()
 
                 registrar_error(
                     fila_excel=fila_excel,
-                    fecha=str(row.get("fec fact", "") or ""),
-                    concepto=str(row.get("factura/venc", "") or ""),
+                    fecha=str(row.get(columnas.get("fecha_factura"), "") or ""),
+                    concepto=str(row.get(columnas.get("referencia"), "") or ""),
                     mensaje=str(e),
                     datos={
-                        "referencia": _texto_limpio(row.get("factura/venc")),
-                        "identificador": _texto_limpio(row.get("identificador")),
-                        "proveedor": _texto_limpio(row.get("razon")),
+                        "referencia": _texto_limpio(row.get(columnas.get("referencia"))),
+                        "identificador": _texto_limpio(row.get(columnas.get("identificador"))) if columnas.get("identificador") else "",
+                        "tercero": _texto_limpio(row.get(columnas.get("tercero"))),
                     },
                 )
 
@@ -1604,6 +1458,14 @@ def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
 
     finally:
         conn.close()
+
+
+def importar_pagos_proveedor_desde_excel(df, nombre_archivo, archivo_bytes):
+    return _importar_cartera_desde_excel(df, nombre_archivo, archivo_bytes, "proveedor")
+
+
+def importar_cobros_cliente_desde_excel(df, nombre_archivo, archivo_bytes):
+    return _importar_cartera_desde_excel(df, nombre_archivo, archivo_bytes, "cliente")
 
 
 # =========================

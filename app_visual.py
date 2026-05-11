@@ -41,6 +41,7 @@ from importador_excel import (
     cambiar_estado_incidencia_importacion,
     borrar_incidencia_importacion,
     importar_pagos_proveedor_desde_excel,
+    importar_cobros_cliente_desde_excel,
     limpiar_historico_importaciones,
 )
 try:
@@ -5339,95 +5340,53 @@ def pantalla_importar_excel():
                     if st.button("Cancelar importacion pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
                         st.session_state["confirmar_importacion_pagos_proveedor"] = False
 
-        elif tipo_excel == "__no_usar__pagos_proveedor_antiguo":
-            importadas = int(resultado.get("importadas", 0))
-            num_errores = int(resultado.get("num_errores", 0))
+        elif tipo_excel == "cobros_cliente":
+            st.success("Excel detectado como COBROS DE CLIENTES / VENCIMIENTOS DE COBRO")
+            st.subheader("Vista previa de cobros de clientes")
+            st.dataframe(df, use_container_width=True)
 
-            st.success(f"Pagos a proveedores importados: {importadas}")
+            if "confirmar_importacion_cobros_cliente" not in st.session_state:
+                st.session_state["confirmar_importacion_cobros_cliente"] = False
 
-            if num_errores > 0:
-                st.warning(f"Errores detectados: {num_errores}")
+            if st.button("Importar cobros de clientes", key="btn_importar_cobros_cliente"):
+                st.session_state["confirmar_importacion_cobros_cliente"] = True
 
-                df_errores = pd.DataFrame(resultado["errores"])
+            if st.session_state["confirmar_importacion_cobros_cliente"]:
+                st.warning("Estas seguro de que quieres importar este documento de cobros de clientes")
 
-                for i, row in df_errores.iterrows():
-                    col1, col2, col3, col4, col5 = st.columns([1, 2, 2, 2, 1])
+                c1, c2 = st.columns(2)
 
-                    with col1:
-                        st.write(row.get("fila_excel"))
+                with c1:
+                    if st.button("Si, importar cobros de clientes", key="btn_confirmar_importar_cobros_cliente"):
+                        archivo_bytes = st.session_state["archivo_excel"].getvalue()
 
-                    with col2:
-                        st.write(row.get("tercero"))
+                        resultado = importar_cobros_cliente_desde_excel(
+                            df,
+                            st.session_state["archivo_excel"].name,
+                            archivo_bytes
+                        )
 
-                    with col3:
-                        st.write(row.get("numero_factura"))
+                        st.session_state["confirmar_importacion_cobros_cliente"] = False
 
-                    with col4:
-                        st.write(row.get("error"))
-
-                    with col5:
-                        if st.button("Y", key=f"editar_error_{i}"):
-                            st.session_state["error_en_edicion"] = dict(row)
-                            st.rerun()
-
-            if "error_en_edicion" in st.session_state:
-
-                error = st.session_state["error_en_edicion"]
-
-                st.divider()
-                st.subheader("Y i  Corregir incidencia")
-
-                fila = error.get("fila_excel")
-
-                nuevo_tercero = st.text_input(
-                    "Tercero",
-                    value=error.get("tercero", ""),
-                    key="edit_tercero"
-                )
-
-                nuevo_numero = st.text_input(
-                    "Numero factura",
-                    value=error.get("numero_factura", ""),
-                    key="edit_numero"
-                )
-
-                nuevo_total = st.number_input(
-                    "Total corregido",
-                    value=0.0,
-                    step=0.01,
-                    key="edit_total"
-                )
-
-                col_a, col_b = st.columns(2)
-
-                with col_a:
-                    if st.button("a... Reintentar importacion"):
-
-                        try:
-                            resultado_reintento = importar_linea_corregida(
-                                df=df,
-                                fila_excel=fila,
-                                tercero=nuevo_tercero,
-                                numero_factura=nuevo_numero,
-                                total=nuevo_total
-                            )
-
-                            st.success("Importado correctamente")
-
-                            del st.session_state["error_en_edicion"]
-                            st.rerun()
-
-                        except Exception as e:
-                            st.error(f"Error: {e}")
-
-                with col_b:
-                    if st.button("a Cancelar"):
-                        del st.session_state["error_en_edicion"]
-                        st.rerun()
+                        if isinstance(resultado, dict) and resultado.get("estado") == "duplicado":
+                            st.warning("Este archivo ya fue importado anteriormente")
+                        elif isinstance(resultado, dict) and resultado.get("estado") == "error_columnas":
+                            faltantes = resultado.get("detalle", [])
+                            st.error(f"Faltan columnas obligatorias: {', '.join(faltantes)}")
+                        elif isinstance(resultado, dict) and not resultado.get("ok", False):
+                            st.error(resultado.get("detalle", str(resultado)))
+                        elif isinstance(resultado, dict):
+                            importadas = int(resultado.get("importadas", 0))
+                            duplicadas = int(resultado.get("duplicadas", 0))
+                            num_errores = int(resultado.get("num_errores", 0))
+                            st.success(f"Cobros de clientes importados: {importadas}. Duplicados omitidos: {duplicadas}")
+                            if num_errores > 0:
+                                st.warning(f"Errores detectados: {num_errores}")
+                                st.dataframe(pd.DataFrame(resultado["errores"]), use_container_width=True)
 
                 with c2:
-                    if st.button("Cancelar importacion pagos a proveedores", key="btn_cancelar_importar_pagos_proveedor"):
-                        st.session_state["confirmar_importacion_pagos_proveedor"] = False
+                    if st.button("Cancelar importacion cobros de clientes", key="btn_cancelar_importar_cobros_cliente"):
+                        st.session_state["confirmar_importacion_cobros_cliente"] = False
 
             st.divider()
             st.markdown("### Mantenimiento importaciones")
@@ -6946,7 +6905,7 @@ def pantalla_incidencias_importacion():
     with f_tipo:
         tipo = st.selectbox(
             "Tipo de importacion",
-            ["todos", "asientos", "movimientos", "facturas", "pagos_proveedor"],
+            ["todos", "asientos", "movimientos", "facturas", "pagos_proveedor", "cobros_cliente"],
             index=0,
             key="inc_tipo_importacion"
         )
