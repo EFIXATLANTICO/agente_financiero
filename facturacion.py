@@ -165,7 +165,8 @@ def calcular_totales_factura_venta(base_imponible, tipo_impuesto):
     }
 
 
-def registrar_factura(
+def _registrar_factura_en_cursor(
+    cursor,
     tipo,
     nombre_tercero,
     nif_tercero,
@@ -188,106 +189,142 @@ def registrar_factura(
     fecha_vencimiento = str(fecha_vencimiento or fecha_emision)
     numero_factura = numero_factura or generar_numero_factura(serie)
 
+    tercero_id = _buscar_o_crear_tercero(cursor, tipo, nombre_tercero, nif_tercero)
+
+    cursor.execute(
+        """
+        INSERT INTO facturas (
+            tipo, serie, numero_factura, tercero_id, nombre_tercero, nif_tercero,
+            fecha_emision, fecha_operacion, fecha_vencimiento, concepto,
+            base_imponible, tipo_impuesto, impuesto_pct, cuota_impuesto, total,
+            moneda, estado, forma_pago, observaciones
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """,
+        (
+            tipo,
+            serie,
+            numero_factura,
+            tercero_id,
+            nombre_tercero,
+            nif_tercero or "",
+            fecha_emision,
+            fecha_operacion,
+            fecha_vencimiento,
+            concepto,
+            totales["base_imponible"],
+            "IGIC",
+            totales["tipo_impuesto"],
+            totales["cuota_impuesto"],
+            totales["total"],
+            moneda,
+            "pendiente",
+            forma_pago,
+            observaciones,
+        ),
+    )
+    factura_id = cursor.fetchone()[0]
+
+    if tipo == "compra":
+        lineas = [
+            (CONFIG_EMPRESA["cuenta_compra_mercaderia"], "debe", totales["base_imponible"]),
+            (CONFIG_EMPRESA["cuenta_igic_soportado"], "debe", totales["cuota_impuesto"]),
+            (CONFIG_EMPRESA["cuenta_proveedores"], "haber", totales["total"]),
+        ]
+        tipo_asiento = "factura_compra"
+    else:
+        concepto_lower = (concepto or "").lower()
+        if "alquiler" in concepto_lower:
+            cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_alquiler"]
+        elif "servicio" in concepto_lower:
+            cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_servicio"]
+        else:
+            cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_venta"]
+
+        lineas = [
+            (CONFIG_EMPRESA["cuenta_clientes"], "debe", totales["total"]),
+            (cuenta_ingreso, "haber", totales["base_imponible"]),
+            (CONFIG_EMPRESA["cuenta_igic_repercutido"], "haber", totales["cuota_impuesto"]),
+        ]
+        tipo_asiento = "factura_venta"
+
+    cursor.execute(
+        """
+        INSERT INTO asientos (fecha, concepto, tipo_operacion)
+        VALUES (%s, %s, %s)
+        RETURNING id
+        """,
+        (fecha_operacion, concepto, tipo_asiento),
+    )
+    asiento_id = cursor.fetchone()[0]
+
+    for cuenta, movimiento, importe in lineas:
+        cursor.execute(
+            """
+            INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (asiento_id, cuenta, movimiento, float(importe)),
+        )
+
+    cursor.execute(
+        """
+        INSERT INTO operaciones_asientos (operacion_id, asiento_id)
+        VALUES (%s, %s)
+        ON CONFLICT DO NOTHING
+        """,
+        (factura_id, asiento_id),
+    )
+
+    return {
+        "ok": True,
+        "factura_id": factura_id,
+        "asiento_id": asiento_id,
+        "tipo": tipo,
+        "numero_factura": numero_factura,
+        **totales,
+    }
+
+
+def registrar_factura(
+    tipo,
+    nombre_tercero,
+    nif_tercero,
+    fecha_emision,
+    fecha_operacion,
+    concepto,
+    base_imponible,
+    impuesto_pct,
+    forma_pago="credito",
+    numero_factura=None,
+    serie="A",
+    fecha_vencimiento=None,
+    observaciones="",
+    moneda="EUR",
+):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        tercero_id = _buscar_o_crear_tercero(cursor, tipo, nombre_tercero, nif_tercero)
-
-        cursor.execute(
-            """
-            INSERT INTO facturas (
-                tipo, serie, numero_factura, tercero_id, nombre_tercero, nif_tercero,
-                fecha_emision, fecha_operacion, fecha_vencimiento, concepto,
-                base_imponible, tipo_impuesto, impuesto_pct, cuota_impuesto, total,
-                moneda, estado, forma_pago, observaciones
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            RETURNING id
-            """,
-            (
-                tipo,
-                serie,
-                numero_factura,
-                tercero_id,
-                nombre_tercero,
-                nif_tercero or "",
-                fecha_emision,
-                fecha_operacion,
-                fecha_vencimiento,
-                concepto,
-                totales["base_imponible"],
-                "IGIC",
-                totales["tipo_impuesto"],
-                totales["cuota_impuesto"],
-                totales["total"],
-                moneda,
-                "pendiente",
-                forma_pago,
-                observaciones,
-            ),
+        resultado = _registrar_factura_en_cursor(
+            cursor,
+            tipo,
+            nombre_tercero,
+            nif_tercero,
+            fecha_emision,
+            fecha_operacion,
+            concepto,
+            base_imponible,
+            impuesto_pct,
+            forma_pago,
+            numero_factura,
+            serie,
+            fecha_vencimiento,
+            observaciones,
+            moneda,
         )
-        factura_id = cursor.fetchone()[0]
-
-        if tipo == "compra":
-            lineas = [
-                (CONFIG_EMPRESA["cuenta_compra_mercaderia"], "debe", totales["base_imponible"]),
-                (CONFIG_EMPRESA["cuenta_igic_soportado"], "debe", totales["cuota_impuesto"]),
-                (CONFIG_EMPRESA["cuenta_proveedores"], "haber", totales["total"]),
-            ]
-            tipo_asiento = "factura_compra"
-        else:
-            concepto_lower = (concepto or "").lower()
-            if "alquiler" in concepto_lower:
-                cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_alquiler"]
-            elif "servicio" in concepto_lower:
-                cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_servicio"]
-            else:
-                cuenta_ingreso = CONFIG_EMPRESA["cuenta_ingreso_venta"]
-
-            lineas = [
-                (CONFIG_EMPRESA["cuenta_clientes"], "debe", totales["total"]),
-                (cuenta_ingreso, "haber", totales["base_imponible"]),
-                (CONFIG_EMPRESA["cuenta_igic_repercutido"], "haber", totales["cuota_impuesto"]),
-            ]
-            tipo_asiento = "factura_venta"
-
-        cursor.execute(
-            """
-            INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (%s, %s, %s)
-            RETURNING id
-            """,
-            (fecha_operacion, concepto, tipo_asiento),
-        )
-        asiento_id = cursor.fetchone()[0]
-
-        for cuenta, movimiento, importe in lineas:
-            cursor.execute(
-                """
-                INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (asiento_id, cuenta, movimiento, float(importe)),
-            )
-
-        cursor.execute(
-            """
-            INSERT INTO operaciones_asientos (operacion_id, asiento_id)
-            VALUES (%s, %s)
-            ON CONFLICT DO NOTHING
-            """,
-            (factura_id, asiento_id),
-        )
-
         conn.commit()
-        return {
-            "ok": True,
-            "factura_id": factura_id,
-            "asiento_id": asiento_id,
-            "tipo": tipo,
-            "numero_factura": numero_factura,
-            **totales,
-        }
+        return resultado
     except Exception as e:
         conn.rollback()
         return {"ok": False, "mensaje": str(e), "error": str(e)}
@@ -411,65 +448,75 @@ def crear_factura_venta(
     )
 
 
+def _registrar_movimiento_factura_en_cursor(cursor, factura_id, fecha, forma_pago, tipo_movimiento):
+    cursor.execute(
+        """
+        SELECT id, tipo, numero_factura, nombre_tercero, total, estado
+        FROM facturas
+        WHERE id = %s
+        LIMIT 1
+        """,
+        (int(factura_id),),
+    )
+    fila = cursor.fetchone()
+    if not fila:
+        raise ValueError("No se encontro la factura.")
+
+    factura_id_db, tipo, numero_factura, nombre_tercero, total, estado_actual = fila
+    estado_actual = str(estado_actual or "").strip().lower()
+    total = float(total or 0)
+    es_venta = tipo == "venta"
+
+    if estado_actual in ("cobrada", "cobrado", "pagada", "pagado"):
+        raise ValueError("La factura ya consta como cobrada/pagada. No se genera otro asiento.")
+
+    cuenta_tesoreria = CONFIG_EMPRESA["cuenta_caja"] if forma_pago == "efectivo" else CONFIG_EMPRESA["cuenta_bancos"]
+    cuenta_tercero = CONFIG_EMPRESA["cuenta_clientes"] if es_venta else CONFIG_EMPRESA["cuenta_proveedores"]
+
+    nuevo_estado = "pagada" if not es_venta else "cobrada"
+    concepto_asiento = f"{'Cobro' if es_venta else 'Pago'} factura {numero_factura} - {nombre_tercero}"
+
+    cursor.execute(
+        "UPDATE facturas SET estado = %s, forma_pago = %s WHERE id = %s",
+        (nuevo_estado, forma_pago, int(factura_id_db)),
+    )
+
+    cursor.execute(
+        """
+        INSERT INTO asientos (fecha, concepto, tipo_operacion)
+        VALUES (%s, %s, %s)
+        RETURNING id
+        """,
+        (str(fecha), concepto_asiento, tipo_movimiento),
+    )
+    asiento_id = cursor.fetchone()[0]
+
+    lineas = (
+        [(cuenta_tesoreria, "debe", total), (cuenta_tercero, "haber", total)]
+        if es_venta
+        else [(cuenta_tercero, "debe", total), (cuenta_tesoreria, "haber", total)]
+    )
+
+    for cuenta, movimiento, importe in lineas:
+        cursor.execute(
+            """
+            INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (asiento_id, cuenta, movimiento, importe),
+        )
+
+    cursor.execute("UPDATE vencimientos SET estado = 'pagado' WHERE factura_id = %s", (int(factura_id_db),))
+    return {"ok": True, "mensaje": "Movimiento registrado correctamente.", "asiento_id": asiento_id}
+
+
 def _registrar_movimiento_factura(factura_id, fecha, forma_pago, tipo_movimiento):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            SELECT id, tipo, numero_factura, nombre_tercero, total, estado
-            FROM facturas
-            WHERE id = %s
-            LIMIT 1
-            """,
-            (int(factura_id),),
-        )
-        fila = cursor.fetchone()
-        if not fila:
-            return {"ok": False, "mensaje": "No se encontro la factura."}
-
-        factura_id_db, tipo, numero_factura, nombre_tercero, total, estado_actual = fila
-        total = float(total or 0)
-        es_venta = tipo == "venta"
-        cuenta_tesoreria = CONFIG_EMPRESA["cuenta_caja"] if forma_pago == "efectivo" else CONFIG_EMPRESA["cuenta_bancos"]
-        cuenta_tercero = CONFIG_EMPRESA["cuenta_clientes"] if es_venta else CONFIG_EMPRESA["cuenta_proveedores"]
-
-        nuevo_estado = "pagada" if not es_venta else "cobrada"
-        concepto_asiento = f"{'Cobro' if es_venta else 'Pago'} factura {numero_factura} - {nombre_tercero}"
-
-        cursor.execute(
-            "UPDATE facturas SET estado = %s, forma_pago = %s WHERE id = %s",
-            (nuevo_estado, forma_pago, int(factura_id_db)),
-        )
-
-        cursor.execute(
-            """
-            INSERT INTO asientos (fecha, concepto, tipo_operacion)
-            VALUES (%s, %s, %s)
-            RETURNING id
-            """,
-            (str(fecha), concepto_asiento, tipo_movimiento),
-        )
-        asiento_id = cursor.fetchone()[0]
-
-        lineas = (
-            [(cuenta_tesoreria, "debe", total), (cuenta_tercero, "haber", total)]
-            if es_venta
-            else [(cuenta_tercero, "debe", total), (cuenta_tesoreria, "haber", total)]
-        )
-
-        for cuenta, movimiento, importe in lineas:
-            cursor.execute(
-                """
-                INSERT INTO lineas_asiento (asiento_id, cuenta, movimiento, importe)
-                VALUES (%s, %s, %s, %s)
-                """,
-                (asiento_id, cuenta, movimiento, importe),
-            )
-
-        cursor.execute("UPDATE vencimientos SET estado = 'pagado' WHERE factura_id = %s", (int(factura_id_db),))
+        resultado = _registrar_movimiento_factura_en_cursor(cursor, factura_id, fecha, forma_pago, tipo_movimiento)
         conn.commit()
-        return {"ok": True, "mensaje": "Movimiento registrado correctamente.", "asiento_id": asiento_id}
+        return resultado
     except Exception as e:
         conn.rollback()
         return {"ok": False, "mensaje": str(e)}
@@ -494,3 +541,65 @@ def cobrar_factura_venta(factura_id, fecha_cobro=None, forma_cobro="transferenci
 def pagar_factura_compra(factura_id, fecha_pago=None, forma_pago="transferencia"):
     fecha_pago = fecha_pago or datetime.datetime.now().strftime("%Y-%m-%d")
     return _registrar_movimiento_factura(factura_id, fecha_pago, forma_pago, "pago_factura")
+
+
+def registrar_factura_y_cobro(
+    tipo,
+    nombre_tercero,
+    nif_tercero,
+    fecha_emision,
+    fecha_operacion,
+    concepto,
+    base_imponible,
+    impuesto_pct,
+    forma_pago="transferencia",
+    numero_factura=None,
+    serie="FV",
+    fecha_vencimiento=None,
+    observaciones="",
+    moneda="EUR",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        factura = _registrar_factura_en_cursor(
+            cursor,
+            tipo,
+            nombre_tercero,
+            nif_tercero,
+            fecha_emision,
+            fecha_operacion,
+            concepto,
+            base_imponible,
+            impuesto_pct,
+            forma_pago,
+            numero_factura,
+            serie,
+            fecha_vencimiento,
+            observaciones,
+            moneda,
+        )
+        cobro = _registrar_movimiento_factura_en_cursor(
+            cursor,
+            factura["factura_id"],
+            fecha_operacion or fecha_emision,
+            forma_pago,
+            "cobro_factura" if _normalizar_tipo(tipo) == "venta" else "pago_factura",
+        )
+        conn.commit()
+        return {
+            **factura,
+            "ok": True,
+            "asiento_factura_id": factura["asiento_id"],
+            "asiento_cobro_id": cobro["asiento_id"],
+            "estado": "cobrada" if _normalizar_tipo(tipo) == "venta" else "pagada",
+        }
+    except Exception as e:
+        conn.rollback()
+        return {"ok": False, "mensaje": str(e), "error": str(e)}
+    finally:
+        conn.close()
+
+
+def crear_factura_venta_y_cobrar(**kwargs):
+    return registrar_factura_y_cobro(tipo="venta", **kwargs)

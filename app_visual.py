@@ -140,7 +140,8 @@ from facturacion import (
     generar_siguiente_numero_factura_venta,
     calcular_totales_factura_venta,
     registrar_factura,
-    registrar_cobro_factura
+    registrar_cobro_factura,
+    registrar_factura_y_cobro
 )
 
 # =========================================================
@@ -4470,28 +4471,35 @@ def pantalla_nueva_factura_venta(cursor):
             st.error("Debes indicar el concepto.")
             return
 
-        resultado = registrar_factura(
-            tipo="venta",
-            nombre_tercero=nombre_cliente.strip(),
-            nif_tercero="",
-            fecha_emision=str(fecha_emision),
-            fecha_operacion=str(fecha_emision),
-            concepto=concepto.strip(),
-            base_imponible=base_imponible,
-            impuesto_pct=tipo_impuesto,
-            forma_pago=forma_pago.lower(),
-            numero_factura=str(numero_factura).strip(),
-            serie="FV",
-            fecha_vencimiento=str(fecha_vencimiento),
-            observaciones=observaciones.strip(),
-            moneda="EUR"
+        datos_factura = {
+            "tipo": "venta",
+            "nombre_tercero": nombre_cliente.strip(),
+            "nif_tercero": "",
+            "fecha_emision": str(fecha_emision),
+            "fecha_operacion": str(fecha_emision),
+            "concepto": concepto.strip(),
+            "base_imponible": base_imponible,
+            "impuesto_pct": tipo_impuesto,
+            "forma_pago": forma_pago.lower(),
+            "numero_factura": str(numero_factura).strip(),
+            "serie": "FV",
+            "fecha_vencimiento": str(fecha_vencimiento),
+            "observaciones": observaciones.strip(),
+            "moneda": "EUR"
+        }
+
+        resultado = (
+            registrar_factura_y_cobro(**datos_factura)
+            if guardar_y_cobrar
+            else registrar_factura(**datos_factura)
         )
         if resultado.get("ok"):
             if guardar_y_cobrar:
                 st.success(
                     f"Factura creada y cobrada correctamente. "
                     f"Factura ID {resultado['factura_id']} | "
-                    f"Asiento factura ID {resultado['asiento_id']} | "
+                    f"Asiento factura ID {resultado['asiento_factura_id']} | "
+                    f"Asiento cobro ID {resultado['asiento_cobro_id']} | "
                     f"Total {resultado['total']:.2f} EUR"
                 )
             else:
@@ -4503,23 +4511,7 @@ def pantalla_nueva_factura_venta(cursor):
                 )
 
             st.session_state["factura_seleccionada_id"] = resultado["factura_id"]
-            estado_factura_visual_tmp = "pendiente"
-
-            if guardar_y_cobrar:
-                resultado_cobro = marcar_factura_como_cobrada_y_registrar_cobro(
-                    factura_id=resultado["factura_id"],
-                    forma_pago=forma_pago.lower(),
-                    fecha_cobro=str(fecha_emision)
-                )
-
-                if resultado_cobro.get("ok"):
-                    st.success(
-                        f"Cobro registrado correctamente. "
-                        f"Asiento de cobro ID {resultado_cobro['asiento_id']}"
-                    )
-                    estado_factura_visual_tmp = "pagada"
-                else:
-                    st.error(f"La factura se creo, pero no se pudo registrar el cobro: {resultado_cobro.get('mensaje')}")
+            estado_factura_visual_tmp = "cobrada" if guardar_y_cobrar else "pendiente"
 
             st.session_state["ultima_factura_venta_creada"] = {
                 "id": resultado["factura_id"],
@@ -4548,7 +4540,10 @@ def pantalla_nueva_factura_venta(cursor):
             }
 
         else:
-            st.error(f"No se pudo crear la factura: {resultado.get('mensaje')}")
+            st.error(
+                "No se pudo completar la operacion. "
+                f"No se ha dejado una factura a medias: {resultado.get('mensaje') or resultado.get('error')}"
+            )
     factura_reciente = st.session_state.get("ultima_factura_venta_creada")
 
     if factura_reciente:

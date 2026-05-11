@@ -1,4 +1,93 @@
 import unittest
+from unittest.mock import patch
+
+
+class FakeCursorFacturacion:
+    def __init__(self):
+        self.next_id = 1
+        self.fetchone_value = None
+        self.facturas = {}
+        self.asientos = []
+        self.commits = 0
+        self.rollbacks = 0
+
+    def execute(self, query, params=None):
+        sql = " ".join(str(query).lower().split())
+        params = params or ()
+
+        if sql.startswith("select id from clientes"):
+            self.fetchone_value = None
+            return
+
+        if sql.startswith("insert into clientes"):
+            self.fetchone_value = (self._id(),)
+            return
+
+        if sql.startswith("insert into facturas"):
+            factura_id = self._id()
+            self.facturas[factura_id] = {
+                "id": factura_id,
+                "tipo": params[0],
+                "numero_factura": params[2],
+                "nombre_tercero": params[4],
+                "total": params[14],
+                "estado": params[16],
+            }
+            self.fetchone_value = (factura_id,)
+            return
+
+        if sql.startswith("insert into asientos"):
+            asiento_id = self._id()
+            self.asientos.append({"id": asiento_id, "tipo": params[2]})
+            self.fetchone_value = (asiento_id,)
+            return
+
+        if sql.startswith("select id, tipo, numero_factura"):
+            factura = self.facturas[int(params[0])]
+            self.fetchone_value = (
+                factura["id"],
+                factura["tipo"],
+                factura["numero_factura"],
+                factura["nombre_tercero"],
+                factura["total"],
+                factura["estado"],
+            )
+            return
+
+        if sql.startswith("update facturas set estado"):
+            factura_id = int(params[2])
+            self.facturas[factura_id]["estado"] = params[0]
+            self.fetchone_value = None
+            return
+
+        self.fetchone_value = None
+
+    def fetchone(self):
+        return self.fetchone_value
+
+    def _id(self):
+        valor = self.next_id
+        self.next_id += 1
+        return valor
+
+
+class FakeConnectionFacturacion:
+    def __init__(self):
+        self.cursor_obj = FakeCursorFacturacion()
+        self.commits = 0
+        self.rollbacks = 0
+
+    def cursor(self):
+        return self.cursor_obj
+
+    def commit(self):
+        self.commits += 1
+
+    def rollback(self):
+        self.rollbacks += 1
+
+    def close(self):
+        pass
 
 
 class SmokeTests(unittest.TestCase):
@@ -25,6 +114,59 @@ class SmokeTests(unittest.TestCase):
 
         self.assertTrue(callable(cobrar_factura_venta))
         self.assertTrue(callable(pagar_factura_compra))
+
+    def test_guardar_factura_crea_un_solo_asiento_factura(self):
+        import facturacion
+
+        fake_conn = FakeConnectionFacturacion()
+        with patch.object(facturacion, "get_connection", return_value=fake_conn):
+            resultado = facturacion.registrar_factura(
+                tipo="venta",
+                nombre_tercero="Cliente Test",
+                nif_tercero="",
+                fecha_emision="2026-05-11",
+                fecha_operacion="2026-05-11",
+                concepto="Venta test",
+                base_imponible=100,
+                impuesto_pct=7,
+                numero_factura="FV-TEST-0001",
+                serie="FV",
+            )
+
+        self.assertTrue(resultado["ok"])
+        self.assertEqual(fake_conn.commits, 1)
+        self.assertEqual(fake_conn.rollbacks, 0)
+        self.assertEqual([a["tipo"] for a in fake_conn.cursor_obj.asientos], ["factura_venta"])
+        factura = fake_conn.cursor_obj.facturas[resultado["factura_id"]]
+        self.assertEqual(factura["estado"], "pendiente")
+
+    def test_guardar_y_cobrar_crea_factura_y_asiento_cobro_atomico(self):
+        import facturacion
+
+        fake_conn = FakeConnectionFacturacion()
+        with patch.object(facturacion, "get_connection", return_value=fake_conn):
+            resultado = facturacion.registrar_factura_y_cobro(
+                tipo="venta",
+                nombre_tercero="Cliente Test",
+                nif_tercero="",
+                fecha_emision="2026-05-11",
+                fecha_operacion="2026-05-11",
+                concepto="Venta test",
+                base_imponible=100,
+                impuesto_pct=7,
+                numero_factura="FV-TEST-0002",
+                serie="FV",
+                forma_pago="transferencia",
+            )
+
+        self.assertTrue(resultado["ok"])
+        self.assertEqual(fake_conn.commits, 1)
+        self.assertEqual(fake_conn.rollbacks, 0)
+        self.assertEqual([a["tipo"] for a in fake_conn.cursor_obj.asientos], ["factura_venta", "cobro_factura"])
+        factura = fake_conn.cursor_obj.facturas[resultado["factura_id"]]
+        self.assertEqual(factura["estado"], "cobrada")
+        self.assertIn("asiento_factura_id", resultado)
+        self.assertIn("asiento_cobro_id", resultado)
 
 
 if __name__ == "__main__":
