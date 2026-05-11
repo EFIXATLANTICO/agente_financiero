@@ -2,7 +2,7 @@ import datetime
 
 from config_empresa import CONFIG_EMPRESA
 from contabilidad import crear_asiento, agregar_linea_asiento
-from db_context import get_connection
+from db_context import get_connection, obtener_empresa_id_activa
 
 
 def _fetchone_dict(cursor, fila):
@@ -184,6 +184,7 @@ def _registrar_factura_en_cursor(
 ):
     tipo = _normalizar_tipo(tipo)
     totales = calcular_totales_factura_venta(base_imponible, impuesto_pct)
+    crear_vencimiento = bool(fecha_vencimiento)
     fecha_operacion = str(fecha_operacion or fecha_emision)
     fecha_emision = str(fecha_emision)
     fecha_vencimiento = str(fecha_vencimiento or fecha_emision)
@@ -276,6 +277,31 @@ def _registrar_factura_en_cursor(
         """,
         (factura_id, asiento_id),
     )
+
+    if crear_vencimiento and forma_pago not in ("contado", "efectivo", "caja"):
+        empresa_id = obtener_empresa_id_activa()
+        tipo_vencimiento = "cobro" if tipo == "venta" else "pago"
+        cursor.execute(
+            """
+            INSERT INTO vencimientos (
+                empresa_id, factura_id, fecha_vencimiento, importe, importe_pendiente,
+                estado, tipo, nombre_tercero, forma_pago, importe_total
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                empresa_id,
+                factura_id,
+                fecha_vencimiento,
+                float(totales["total"]),
+                float(totales["total"]),
+                "pendiente",
+                tipo_vencimiento,
+                nombre_tercero,
+                forma_pago,
+                float(totales["total"]),
+            ),
+        )
 
     return {
         "ok": True,
@@ -506,7 +532,15 @@ def _registrar_movimiento_factura_en_cursor(cursor, factura_id, fecha, forma_pag
             (asiento_id, cuenta, movimiento, importe),
         )
 
-    cursor.execute("UPDATE vencimientos SET estado = 'pagado' WHERE factura_id = %s", (int(factura_id_db),))
+    estado_vencimiento = "cobrado" if es_venta else "pagado"
+    cursor.execute(
+        """
+        UPDATE vencimientos
+        SET estado = %s, importe_pendiente = 0
+        WHERE factura_id = %s
+        """,
+        (estado_vencimiento, int(factura_id_db)),
+    )
     return {"ok": True, "mensaje": "Movimiento registrado correctamente.", "asiento_id": asiento_id}
 
 

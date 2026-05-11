@@ -125,7 +125,7 @@ from terceros import (
     metricas_tercero,
 )
 
-from tesoreria import registrar_desde_vencimiento
+from tesoreria import registrar_desde_vencimiento, listar_vencimientos
 
 from contabilidad import aplicar_correccion_incidencia
 
@@ -5890,133 +5890,96 @@ def pantalla_operaciones(cursor):
 def pantalla_vencimientos(cursor):
     st.markdown('<div class="section-title">Vencimientos</div>', unsafe_allow_html=True)
 
-    try:
-        cursor.execute("""
-        SELECT
-            id,
-            empresa_id,
-            factura_id,
-            nombre_tercero,
-            tipo,
-            fecha_vencimiento,
-            importe,
-            importe_pendiente,
-            estado,
-            creado_en
-        FROM vencimientos
-        ORDER BY fecha_vencimiento ASC, id DESC
-        """)
-        vencimientos = cursor.fetchall()
-    except Exception as e:
-        st.error(str(e))
-        return
-
-    if not vencimientos:
-        st.info("No hay vencimientos registrados.")
-        return
-
-    df = pd.DataFrame(
-        vencimientos,
-        columns=[
-            "ID",
-            "Empresa ID",
-            "Referencia",
-            "Nombre tercero",
-            "Tipo",
-            "Fecha vencimiento",
-            "Importe",
-            "Importe pendiente",
-            "Estado",
-            "Creado en"
-        ]
-)
-
-    df["Fecha vencimiento"] = pd.to_datetime(df["Fecha vencimiento"], errors="coerce")
-    hoy = pd.Timestamp.today().normalize()
-
-    pendientes = df[df["Estado"].isin(["pendiente", "vencido", "cobro_parcial", "pago_parcial"])].copy()
-    vencidos = pendientes[pendientes["Fecha vencimiento"] < hoy].copy()
-    proximos = pendientes[
-        (pendientes["Fecha vencimiento"] >= hoy) &
-        (pendientes["Fecha vencimiento"] <= hoy + pd.Timedelta(days=7))
-    ].copy()
-
     if "filtro_vencimientos" not in st.session_state:
         st.session_state["filtro_vencimientos"] = "todos"
+
+    hoy = pd.Timestamp.today().date()
+    todos = listar_vencimientos("todos")
+    pendientes = listar_vencimientos("pendientes", hoy=hoy)
+    vencidos = listar_vencimientos("vencidos", hoy=hoy)
+    proximos = listar_vencimientos("proximos", hoy=hoy)
+
+    if not todos:
+        st.info("No hay vencimientos registrados.")
+        return
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.metric("Pendientes", len(pendientes))
         if st.button("Ver pendientes", key="btn_ver_pendientes"):
             st.session_state["filtro_vencimientos"] = "pendientes"
+            st.rerun()
 
     with c2:
         st.metric("Vencidos", len(vencidos))
         if st.button("Ver vencidos", key="btn_ver_vencidos"):
             st.session_state["filtro_vencimientos"] = "vencidos"
+            st.rerun()
 
     with c3:
         st.metric("Proximos 7 dias", len(proximos))
         if st.button("Ver proximos 7 dias", key="btn_ver_proximos"):
             st.session_state["filtro_vencimientos"] = "proximos"
+            st.rerun()
 
     with c4:
-        st.metric("Todos", len(df))
+        st.metric("Todos", len(todos))
         if st.button("Ver todos", key="btn_ver_todos_vencimientos"):
             st.session_state["filtro_vencimientos"] = "todos"
+            st.rerun()
 
     filtro = st.session_state["filtro_vencimientos"]
+    titulos = {
+        "pendientes": "Listado de vencimientos pendientes",
+        "vencidos": "Listado de vencimientos vencidos",
+        "proximos": "Listado de vencimientos proximos 7 dias",
+        "todos": "Listado completo de vencimientos",
+    }
 
-    if filtro == "pendientes":
-        df_mostrar = pendientes.copy()
-        st.subheader("Listado de vencimientos pendientes")
-    elif filtro == "vencidos":
-        df_mostrar = vencidos.copy()
-        st.subheader("Listado de vencimientos vencidos")
-    elif filtro == "proximos":
-        df_mostrar = proximos.copy()
-        st.subheader("Listado de vencimientos proximos 7 dias")
-    else:
-        df_mostrar = df.copy()
-        st.subheader("Listado completo de vencimientos")
+    st.subheader(titulos.get(filtro, titulos["todos"]))
 
-    if df_mostrar.empty:
+    terceros = sorted(
+        [str(x).strip() for x in pd.DataFrame(todos).get("nombre_tercero", pd.Series(dtype=str)).dropna().unique().tolist() if str(x).strip()]
+    )
+    tercero_seleccionado = st.selectbox(
+        "Filtrar por tercero",
+        ["Todos"] + terceros,
+        key="filtro_tercero_vencimientos"
+    )
+    tercero_filtro = None if tercero_seleccionado == "Todos" else tercero_seleccionado
+
+    registros = listar_vencimientos(filtro=filtro, tercero=tercero_filtro, hoy=hoy)
+    if not registros:
         st.info("No hay registros para este filtro.")
         return
 
-    empresas = sorted(
-        [x for x in df_mostrar["Nombre tercero"].dropna().astype(str).unique().tolist() if x.strip()]
-    )
-
-    empresa_seleccionada = st.selectbox(
-        "Filtrar por empresa / tercero",
-        ["Todas"] + empresas,
-        key="filtro_empresa_vencimientos"
-    )
-
-    if empresa_seleccionada != "Todas":
-        df_mostrar = df_mostrar[
-            df_mostrar["Nombre tercero"].astype(str).str.upper() == empresa_seleccionada.upper()
-        ].copy()
-
-    if df_mostrar.empty:
-        st.info("No hay vencimientos para la empresa seleccionada.")
-        return
-
-    total_importe = df_mostrar["Importe"].fillna(0).astype(float).sum()
-    st.write(f"**Total importe listado:** {formatear_moneda(total_importe)}")
-
+    df_mostrar = pd.DataFrame(registros)
+    df_mostrar = df_mostrar.rename(columns={
+        "id": "ID",
+        "empresa_id": "Empresa ID",
+        "factura_id": "Referencia",
+        "nombre_tercero": "Nombre tercero",
+        "tipo": "Tipo",
+        "fecha_vencimiento": "Fecha vencimiento",
+        "importe": "Importe",
+        "importe_pendiente": "Importe pendiente",
+        "estado": "Estado",
+        "creado_en": "Creado en",
+    })
+    df_mostrar["Fecha vencimiento"] = pd.to_datetime(df_mostrar["Fecha vencimiento"], errors="coerce")
     df_mostrar = df_mostrar.sort_values(
         by=["Fecha vencimiento", "Nombre tercero", "ID"],
         ascending=[True, True, False]
     ).reset_index(drop=True)
 
+    total_importe = df_mostrar["Importe pendiente"].fillna(df_mostrar["Importe"]).astype(float).sum()
+    st.write(f"**Total pendiente listado:** {formatear_moneda(total_importe)}")
     st.dataframe(df_mostrar, use_container_width=True)
 
     st.markdown("### Registrar pago / cobro desde vencimiento")
 
     opciones = {
-        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {formatear_moneda(row['Importe'])} | {row['Estado']}": int(row["ID"])
+        f"{row['ID']} | {row['Nombre tercero']} | {row['Tipo']} | {formatear_moneda(row['Importe pendiente'])} | {row['Estado']}": int(row["ID"])
         for _, row in df_mostrar.iterrows()
         if str(row["Estado"]).strip().lower() in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]
     }
@@ -6034,7 +5997,7 @@ def pantalla_vencimientos(cursor):
     vencimiento_id = opciones[seleccion]
 
     fila_vencimiento = df_mostrar[df_mostrar["ID"] == vencimiento_id].iloc[0]
-    importe_pendiente_actual = float(fila_vencimiento["Importe pendiente"])
+    importe_pendiente_actual = float(fila_vencimiento["Importe pendiente"] or fila_vencimiento["Importe"] or 0)
 
     fecha_pago = st.text_input(
         "Fecha de pago / cobro (YYYY-MM-DD)",
@@ -6046,7 +6009,7 @@ def pantalla_vencimientos(cursor):
         "Importe a registrar",
         min_value=0.01,
         step=0.01,
-        value=importe_pendiente_actual,
+        value=max(0.01, importe_pendiente_actual),
         key="importe_operar_vencimiento"
     )
     forma_pago = st.selectbox(
@@ -6062,13 +6025,14 @@ def pantalla_vencimientos(cursor):
     if not st.session_state["confirmar_operacion_vencimiento"]:
         if st.button("Registrar pago / cobro", key="btn_registrar_desde_vencimiento"):
             st.session_state["confirmar_operacion_vencimiento"] = True
+            st.rerun()
     else:
         st.warning("Confirma el registro de pago / cobro del vencimiento seleccionado.")
 
         cc1, cc2 = st.columns(2)
 
         with cc1:
-            if st.button("SA, registrar", key="btn_confirmar_registrar_vencimiento_si"):
+            if st.button("Si, registrar", key="btn_confirmar_registrar_vencimiento_si"):
                 resultado = registrar_desde_vencimiento(
                     vencimiento_id=vencimiento_id,
                     fecha=fecha_pago,
@@ -6087,6 +6051,7 @@ def pantalla_vencimientos(cursor):
         with cc2:
             if st.button("Cancelar", key="btn_confirmar_registrar_vencimiento_no"):
                 st.session_state["confirmar_operacion_vencimiento"] = False
+                st.rerun()
 
 def pantalla_inmovilizado():
     st.markdown('<div class="section-title">Gestion de inmovilizado</div>', unsafe_allow_html=True)

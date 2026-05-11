@@ -1,7 +1,128 @@
-from db_context import get_connection
+from db_context import get_connection, obtener_empresa_id_activa
 from config_empresa import CONFIG_EMPRESA
 from conciliacion_bancaria import registrar_movimiento_banco
 
+
+
+
+# =========================
+# VENCIMIENTOS
+# =========================
+
+def _fecha_date(valor):
+    import datetime
+
+    if isinstance(valor, datetime.datetime):
+        return valor.date()
+    if isinstance(valor, datetime.date):
+        return valor
+    try:
+        return datetime.datetime.strptime(str(valor)[:10], "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
+def _estado_operable(estado):
+    return str(estado or "").strip().lower() in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]
+
+
+def _filtrar_vencimientos(filas, filtro="todos", tercero=None, hoy=None):
+    import datetime
+
+    hoy = hoy or datetime.date.today()
+    filtro = str(filtro or "todos").strip().lower()
+    tercero = str(tercero or "").strip().upper()
+    resultado = []
+
+    for fila in filas:
+        fila = dict(fila)
+        estado = str(fila.get("estado") or "").strip().lower()
+        fecha = _fecha_date(fila.get("fecha_vencimiento"))
+        operable = _estado_operable(estado)
+
+        incluir = True
+        if filtro == "pendientes":
+            incluir = operable
+        elif filtro == "vencidos":
+            incluir = operable and fecha is not None and fecha < hoy
+        elif filtro == "proximos":
+            incluir = operable and fecha is not None and hoy <= fecha <= hoy + datetime.timedelta(days=7)
+
+        if incluir and tercero:
+            incluir = str(fila.get("nombre_tercero") or "").strip().upper() == tercero
+
+        if incluir:
+            resultado.append(fila)
+
+    return resultado
+
+
+def listar_vencimientos(filtro="todos", tercero=None, hoy=None):
+    empresa_id = obtener_empresa_id_activa()
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            SELECT
+                id,
+                empresa_id,
+                factura_id,
+                nombre_tercero,
+                tipo,
+                fecha_vencimiento,
+                importe,
+                COALESCE(importe_pendiente, importe, 0) AS importe_pendiente,
+                estado,
+                creado_en
+            FROM vencimientos
+            WHERE empresa_id = %s OR empresa_id IS NULL
+            ORDER BY fecha_vencimiento ASC, id DESC
+            """,
+            (empresa_id,),
+        )
+        columnas = [desc[0] for desc in cursor.description]
+        filas = [dict(zip(columnas, fila)) for fila in cursor.fetchall()]
+        return _filtrar_vencimientos(filas, filtro=filtro, tercero=tercero, hoy=hoy)
+    finally:
+        conn.close()
+
+
+def _actualizar_factura_desde_vencimiento(cursor, factura_id, tipo_venc, nuevo_estado_venc, forma_pago, observaciones):
+    if not factura_id:
+        return
+
+    cursor.execute("SELECT id, tipo FROM facturas WHERE id = %s LIMIT 1", (int(factura_id),))
+    factura = cursor.fetchone()
+    if not factura:
+        return
+
+    cursor.execute(
+        """
+        SELECT COALESCE(SUM(COALESCE(importe_pendiente, importe, 0)), 0)
+        FROM vencimientos
+        WHERE factura_id = %s
+          AND estado IN ('pendiente', 'vencido', 'cobro_parcial', 'pago_parcial')
+        """,
+        (int(factura_id),),
+    )
+    pendiente_total = float(cursor.fetchone()[0] or 0)
+
+    tipo_factura = str(factura[1] or "").strip().lower()
+    if pendiente_total <= 0:
+        estado_factura = "cobrada" if tipo_factura == "venta" or tipo_venc == "cobro" else "pagada"
+    else:
+        estado_factura = "cobro_parcial" if tipo_factura == "venta" or tipo_venc == "cobro" else "pago_parcial"
+
+    cursor.execute(
+        """
+        UPDATE facturas
+        SET estado = %s, forma_pago = %s, observaciones = %s
+        WHERE id = %s
+        """,
+        (estado_factura, forma_pago, observaciones, int(factura_id)),
+    )
 
 # =========================
 # COBROS Y PAGOS
@@ -249,11 +370,13 @@ def registrar_desde_vencimiento(vencimiento_id, fecha, forma_pago="transferencia
         cursor.execute(
             """
             UPDATE vencimientos
-            SET estado = %s, importe_pendiente = %s
+            SET estado = %s, importe_pendiente = %s, forma_pago = %s
             WHERE id = %s
             """,
-            (nuevo_estado, nuevo_pendiente, id_venc)
+            (nuevo_estado, nuevo_pendiente, forma_pago, id_venc)
         )
+
+        _actualizar_factura_desde_vencimiento(cursor, factura_id, tipo_venc, nuevo_estado, forma_pago, observaciones)
 
         conn.commit()
 

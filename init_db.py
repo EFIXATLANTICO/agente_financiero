@@ -136,10 +136,16 @@ def inicializar_bd_empresa():
     cur.execute("""
     CREATE TABLE IF NOT EXISTS vencimientos (
         id SERIAL PRIMARY KEY,
+        empresa_id INTEGER,
         factura_id INTEGER,
         fecha_vencimiento TEXT,
         importe REAL DEFAULT 0,
+        importe_pendiente REAL DEFAULT 0,
         estado TEXT DEFAULT 'pendiente',
+        tipo TEXT,
+        nombre_tercero TEXT,
+        forma_pago TEXT,
+        importe_total REAL DEFAULT 0,
         creado_en TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """)
@@ -199,6 +205,7 @@ def inicializar_bd_empresa():
         "ALTER TABLE facturas ADD COLUMN IF NOT EXISTS forma_pago TEXT",
         "ALTER TABLE facturas ADD COLUMN IF NOT EXISTS observaciones TEXT",
         "ALTER TABLE movimientos_banco ADD COLUMN IF NOT EXISTS revisado INTEGER DEFAULT 0",
+        "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS empresa_id INTEGER",
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS importe REAL DEFAULT 0",
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS estado TEXT DEFAULT 'pendiente'",
         "ALTER TABLE vencimientos ADD COLUMN IF NOT EXISTS creado_en TEXT DEFAULT CURRENT_TIMESTAMP",

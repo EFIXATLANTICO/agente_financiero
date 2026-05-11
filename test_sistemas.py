@@ -241,6 +241,95 @@ class FakeConnectionImportador:
         pass
 
 
+class FakeCursorTesoreria:
+    def __init__(self):
+        self.next_id = 10
+        self.fetchone_value = None
+        self.vencimientos = {
+            1: {"id": 1, "factura_id": 7, "tipo": "cobro", "estado": "pendiente", "importe": 107.0, "importe_pendiente": 107.0},
+        }
+        self.facturas = {7: {"id": 7, "tipo": "venta", "estado": "pendiente", "forma_pago": ""}}
+        self.asientos = []
+        self.lineas = []
+
+    def execute(self, query, params=None):
+        sql = " ".join(str(query).lower().split())
+        params = params or ()
+
+        if sql.startswith("select id, factura_id, tipo, estado"):
+            venc = self.vencimientos.get(int(params[0]))
+            self.fetchone_value = (
+                venc["id"], venc["factura_id"], venc["tipo"], venc["estado"], venc["importe"], venc["importe_pendiente"]
+            ) if venc else None
+            return
+
+        if sql.startswith("insert into asientos"):
+            asiento_id = self.next_id
+            self.next_id += 1
+            self.asientos.append({"id": asiento_id, "fecha": params[0], "concepto": params[1], "tipo_operacion": params[2]})
+            self.fetchone_value = (asiento_id,)
+            return
+
+        if sql.startswith("insert into lineas_asiento"):
+            self.lineas.append({"asiento_id": params[0], "cuenta": params[1], "movimiento": params[2], "importe": params[3]})
+            self.fetchone_value = None
+            return
+
+        if sql.startswith("update vencimientos"):
+            venc = self.vencimientos[int(params[3])]
+            venc["estado"] = params[0]
+            venc["importe_pendiente"] = params[1]
+            venc["forma_pago"] = params[2]
+            self.fetchone_value = None
+            return
+
+        if sql.startswith("select id, tipo from facturas"):
+            fac = self.facturas.get(int(params[0]))
+            self.fetchone_value = (fac["id"], fac["tipo"]) if fac else None
+            return
+
+        if sql.startswith("select coalesce(sum"):
+            factura_id = int(params[0])
+            total = sum(
+                float(v["importe_pendiente"] or 0)
+                for v in self.vencimientos.values()
+                if v["factura_id"] == factura_id and v["estado"] in ["pendiente", "vencido", "cobro_parcial", "pago_parcial"]
+            )
+            self.fetchone_value = (total,)
+            return
+
+        if sql.startswith("update facturas"):
+            factura_id = int(params[3])
+            self.facturas[factura_id]["estado"] = params[0]
+            self.facturas[factura_id]["forma_pago"] = params[1]
+            self.fetchone_value = None
+            return
+
+        self.fetchone_value = None
+
+    def fetchone(self):
+        return self.fetchone_value
+
+
+class FakeConnectionTesoreria:
+    def __init__(self):
+        self.cursor_obj = FakeCursorTesoreria()
+        self.commits = 0
+        self.rollbacks = 0
+
+    def cursor(self):
+        return self.cursor_obj
+
+    def commit(self):
+        self.commits += 1
+
+    def rollback(self):
+        self.rollbacks += 1
+
+    def close(self):
+        pass
+
+
 class SmokeTests(unittest.TestCase):
     def test_imports_principales(self):
         import app  # noqa: F401
@@ -417,6 +506,42 @@ class SmokeTests(unittest.TestCase):
         self.assertFalse(resultado["ok"])
         self.assertEqual(resultado["estado"], "error_columnas")
         self.assertIn("proveedor", resultado["detalle"])
+
+    def test_vencimientos_filtro_pendientes_vencidos_y_proximos(self):
+        import datetime
+        import tesoreria
+
+        hoy = datetime.date(2026, 5, 11)
+        filas = [
+            {"id": 1, "estado": "pendiente", "fecha_vencimiento": "2026-05-10", "nombre_tercero": "A"},
+            {"id": 2, "estado": "pendiente", "fecha_vencimiento": "2026-05-15", "nombre_tercero": "B"},
+            {"id": 3, "estado": "pagado", "fecha_vencimiento": "2026-05-09", "nombre_tercero": "C"},
+        ]
+
+        self.assertEqual([r["id"] for r in tesoreria._filtrar_vencimientos(filas, "pendientes", hoy=hoy)], [1, 2])
+        self.assertEqual([r["id"] for r in tesoreria._filtrar_vencimientos(filas, "vencidos", hoy=hoy)], [1])
+        self.assertEqual([r["id"] for r in tesoreria._filtrar_vencimientos(filas, "proximos", hoy=hoy)], [2])
+
+    def test_registrar_desde_vencimiento_actualiza_vencimiento_factura_y_asiento(self):
+        import tesoreria
+
+        fake_conn = FakeConnectionTesoreria()
+        with patch.object(tesoreria, "get_connection", return_value=fake_conn), \
+             patch.object(tesoreria, "registrar_movimiento_banco", return_value=None):
+            resultado = tesoreria.registrar_desde_vencimiento(
+                vencimiento_id=1,
+                fecha="2026-05-11",
+                forma_pago="transferencia",
+                importe=107.0,
+                observaciones="test",
+            )
+
+        self.assertTrue(resultado["ok"])
+        self.assertEqual(fake_conn.cursor_obj.vencimientos[1]["estado"], "cobrado")
+        self.assertEqual(fake_conn.cursor_obj.vencimientos[1]["importe_pendiente"], 0.0)
+        self.assertEqual(fake_conn.cursor_obj.facturas[7]["estado"], "cobrada")
+        self.assertEqual([a["tipo_operacion"] for a in fake_conn.cursor_obj.asientos], ["cobro"])
+        self.assertEqual(fake_conn.commits, 1)
 
 
 if __name__ == "__main__":
